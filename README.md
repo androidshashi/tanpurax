@@ -1,86 +1,99 @@
 # TanpuraX 🎵
 
-TanpuraX is a **procedural audio synthesis–based Tanpura application** built using **Flutter** and a **custom native audio engine**.  
-The project focuses on **high-quality, low-latency sound generation** using Android NDK instead of pre-recorded audio loops.
+TanpuraX is a **procedural audio synthesis–based Tanpura application** built using **Flutter** and a **custom native audio engine**.
+This repository follows a **Flutter-first monorepo structure**, where the main app and the audio engine package live together.
 
-> ⚠️ This is a **private repository**. The codebase is not intended for open-source distribution.
+> ⚠️ This is a **private repository**. This codebase is proprietary and not intended for open-source use.
 
 ---
 
-## 🎯 Project Goal
+## 🎯 Project Objective
 
-- Create a **studio-quality Tanpura app**
-- Use **procedural sound synthesis** instead of static audio files
-- Achieve **low-latency and glitch-free playback**
-- Support **long-duration continuous playback**
-- Maintain **musical pitch accuracy** (Sa / Pa / variations)
+- Build a **high-quality Tanpura app**
+- Generate sound **procedurally** (no recorded loops)
+- Achieve **low-latency, stable playback**
+- Support **continuous long-duration sessions**
+- Maintain **accurate musical pitch**
 
 ---
 
 ## 🧠 Architecture Overview
 
-Flutter UI (Dart)  
+Flutter App (UI)  
+↓  
+Flutter Plugin / Dart API  
 ↓  
 Platform Channels (JNI)  
 ↓  
 Native Audio Engine (C++)  
 ↓  
-Oboe (AAudio / OpenSL ES)  
-↓  
-Android Audio Hardware
+Oboe (AAudio / OpenSL ES)
 
 ---
 
-## 🛠 Tech Stack
+## 🛠 Technology Stack
 
-### Frontend
+### Flutter / Dart
 
 - Flutter
 - Dart
 
-### Native / Audio
+### Native Audio
 
 - Android NDK
 - C++
-- Oboe (Low-latency audio)
+- Oboe
 - JNI
 
-### Build Tools
+### Tooling
 
 - Gradle
 - CMake
+- Flutter tooling
 
 ---
 
-## 🔊 Audio Engine Highlights
+## 📁 Monorepo Structure (Actual)
 
-- Procedural waveform generation
-- Real-time frequency control
-- Sample-accurate timing
+```
+tanpurax/
+├── apps/
+│   └── tanpura/                 # Main Flutter application
+│       ├── android/
+│       ├── ios/
+│       ├── lib/
+│       ├── test/
+│       ├── pubspec.yaml
+│       └── README.md
+│
+├── packages/
+│   └── tanpura_engine/          # Flutter plugin + native audio engine
+│       ├── android/             # Android plugin & NDK code
+│       ├── lib/                 # Dart API
+│       ├── example/             # Example Flutter app
+│       ├── test/
+│       ├── pubspec.yaml
+│       ├── CHANGELOG.md
+│       └── LICENSE
+│
+├── docs/                         # Internal documentation
+│
+└── README.md                     # Root documentation
+```
+
+---
+
+## 🔊 tanpura_engine Package
+
+- Flutter plugin exposing Tanpura controls
+- Native Android audio engine (C++ / Oboe)
+- Real-time waveform synthesis
 - Dedicated audio thread
-- Designed for long, uninterrupted playback
+- Designed for long-running playback
 
 ---
 
-## 📁 Project Structure (Simplified)
-
-tanpurax/  
-├── android/  
-│ ├── app/  
-│ └── tanpura_engine/  
-│ ├── audio_engine.cpp  
-│ ├── tanpura_engine.cpp  
-│ ├── CMakeLists.txt  
-│ └── oboe/  
-├── lib/  
-│ ├── main.dart  
-│ └── ui/  
-├── assets/  
-└── README.md
-
----
-
-## 🚀 Build & Run
+## 🚀 Running the App
 
 ### Prerequisites
 
@@ -89,31 +102,35 @@ tanpurax/
 - Android NDK
 - CMake
 
-### Run
+### Steps
 
-flutter pub get  
+```bash
+cd apps/tanpura
+flutter pub get
 flutter run
+```
 
 ---
 
-## 🔒 Repository Access
+## 🔒 Repository Policy
 
 This repository is **private** and intended only for:
 
-- Internal development
-- Personal experimentation
+- Personal development
+- Internal experimentation
 - Commercial product development
 
-Redistribution, copying, or reuse without permission is prohibited.
+**No redistribution or reuse without explicit permission.**
 
 ---
 
-## 📌 Current Status
+## 📌 Project Status
 
-- Native audio engine working
-- Audio thread stable
-- Pitch presets & UI tuning in progress
-- iOS audio engine planned
+- ✅ Monorepo structure finalized
+- ✅ Flutter app integrated with audio engine
+- ✅ Native audio thread stable
+- 🚧 UI refinement
+- 🚧 iOS native engine (planned)
 
 ---
 
@@ -129,3 +146,13 @@ This project is proprietary and confidential.
 Shashi Kumar  
 Senior Mobile App Developer  
 Flutter • Android • Audio Systems
+
+---
+
+## 📝 Notes
+
+- Audio is fully procedural (no samples)
+- Optimized for correctness and latency
+- Structure is intentionally scalable
+
+---
