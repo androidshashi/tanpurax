@@ -18,9 +18,17 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     // ===== JNI FUNCTIONS =====
-    private external fun nativeStart()
-    private external fun nativeStop()
+    private external fun nativeInitialize()
+    private external fun nativeRelease()
+
+    private external fun nativePlay()
+    private external fun nativePause()
+
+    private external fun nativeIsEngineRunning(): Boolean
+    private external fun nativeIsPlaying(): Boolean
+
     private external fun nativeSetTempo(intervalSec: Float)
+
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(
@@ -32,15 +40,46 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
-            "start" -> {
-                nativeStart()
+
+            // ------------------------------------------------------------
+            // Engine lifecycle
+            // ------------------------------------------------------------
+
+            "initialize" -> {
+                nativeInitialize()
                 result.success(null)
             }
 
-            "stop" -> {
-                nativeStop()
+            "release" -> {
+                nativeRelease()
                 result.success(null)
             }
+
+            "is_engine_running" -> {
+                result.success(nativeIsEngineRunning())
+            }
+
+            // ------------------------------------------------------------
+            // Playback lifecycle
+            // ------------------------------------------------------------
+
+            "play" -> {
+                nativePlay()
+                result.success(null)
+            }
+
+            "pause" -> {
+                nativePause()
+                result.success(null)
+            }
+
+            "is_playing" -> {
+                result.success(nativeIsPlaying())
+            }
+
+            // ------------------------------------------------------------
+            // Parameters
+            // ------------------------------------------------------------
 
             "set_tempo" -> {
                 val interval = call.argument<Double>("interval_sec")?.toFloat()
@@ -54,7 +93,8 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         }
     }
 
-    override fun onDetachedFromEngine( binding: FlutterPlugin.FlutterPluginBinding) {
+
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
     }
 }

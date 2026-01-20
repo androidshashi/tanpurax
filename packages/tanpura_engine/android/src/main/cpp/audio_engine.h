@@ -1,22 +1,39 @@
 #pragma once
 #include <oboe/Oboe.h>
+#include <atomic>
 #include <memory>
 
-class AudioEngine : public oboe::AudioStreamCallback {
+class AudioEngine : public oboe::AudioStreamCallback
+{
 public:
-    bool start();
-    void stop();
+    // ---------------- Engine lifecycle ----------------
+    bool initialize(); // start audio stream
+    void release();    // stop audio stream
+    bool isEngineRunning() const;
 
-    oboe::DataCallbackResult onAudioReady(
-            oboe::AudioStream* audioStream,
-            void* audioData,
-            int32_t numFrames
-    ) override;
+    // ---------------- Playback lifecycle ----------------
+    void play();  // enable sound
+    void pause(); // silence sound
+    bool isPlaying() const;
 
+    // ---------------- Parameters ----------------
     void setTempo(float intervalSec) { pluckIntervalSec = intervalSec; }
+
+    // ---------------- Audio callback ----------------
+    oboe::DataCallbackResult
+    onAudioReady(
+        oboe::AudioStream *audioStream,
+        void *audioData,
+        int32_t numFrames) override;
 
 private:
     std::shared_ptr<oboe::AudioStream> stream;
+
+    // Engine state
+    std::atomic<bool> engineRunning{false};
+
+    // Playback state
+    std::atomic<bool> playing{false};
 
     // ===== CORE =====
     float sampleRate = 48000.0f;
@@ -28,10 +45,10 @@ private:
     static constexpr int kNumStrings = 4;
 
     float stringFreq[kNumStrings] = {
-            130.81f, // Sa
-            196.00f, // Pa
-            130.81f, // Sa
-            130.81f  // Sa
+        130.81f, // Sa
+        196.00f, // Pa
+        130.81f, // Sa
+        130.81f  // Sa
     };
 
     float stringPhase[kNumStrings] = {0};

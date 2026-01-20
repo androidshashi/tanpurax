@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:tanpura/theme/app_theme.dart';
 import 'package:tanpura/ui/home_screen.dart';
+import 'package:tanpura_engine/tanpura_engine.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await TanpuraEngine.initialize();
   runApp(const TanpuraApp());
 }
 

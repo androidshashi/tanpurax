@@ -4,51 +4,114 @@
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "TanpuraEngine", __VA_ARGS__)
 
-bool AudioEngine::start() {
+// Start the audio engine
+bool AudioEngine::initialize()
+{
+
+    if (engineRunning)
+    {
+        return true;
+        LOGI("AudioEngine already running");
+    }
+
     LOGI("AudioEngine started");
 
     oboe::AudioStreamBuilder builder;
 
     builder.setDirection(oboe::Direction::Output)
-            ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
-            ->setSharingMode(oboe::SharingMode::Exclusive)
-            ->setChannelCount(oboe::ChannelCount::Mono)
-            ->setFormat(oboe::AudioFormat::Float)
-            ->setCallback(this);
+        ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
+        ->setSharingMode(oboe::SharingMode::Exclusive)
+        ->setChannelCount(oboe::ChannelCount::Mono)
+        ->setFormat(oboe::AudioFormat::Float)
+        ->setCallback(this);
 
-    if (builder.openStream(stream) != oboe::Result::OK) {
+    if (builder.openStream(stream) != oboe::Result::OK)
+    {
         return false;
     }
 
     sampleRate = static_cast<float>(stream->getSampleRate());
     stream->requestStart();
+    engineRunning = true;
+    playing = false; // important
 
     return true;
 }
 
-void AudioEngine::stop() {
-    LOGI("AudioEngine stopped");
+// Stop the audio engine
+void AudioEngine::release()
+{
 
-    if (stream) {
+    if (!engineRunning)
+    {
+        LOGI("AudioEngine not running");
+        return;
+    }
+
+    LOGI("AudioEngine released");
+
+    playing = false;
+
+    if (stream)
+    {
         stream->requestStop();
         stream->close();
         stream.reset();
     }
+
+    engineRunning = false;
 }
 
-oboe::DataCallbackResult AudioEngine::onAudioReady(
-        oboe::AudioStream*,
-        void* audioData,
-        int32_t numFrames) {
+void AudioEngine::play()
+{
+    if (!engineRunning)
+        return;
 
-    auto* output = static_cast<float*>(audioData);
+    LOGI("Playback started");
+    playing = true;
+}
+
+void AudioEngine::pause()
+{
+    LOGI("Playback paused");
+    playing = false;
+}
+
+// Check if Engine is initalized
+bool AudioEngine::isEngineRunning() const
+{
+    return engineRunning;
+}
+
+// Check if playback is active
+bool AudioEngine::isPlaying() const
+{
+    return playing;
+}
+
+// Audio callback
+oboe::DataCallbackResult AudioEngine::onAudioReady(
+    oboe::AudioStream *,
+    void *audioData,
+    int32_t numFrames)
+{
+
+    // Silence if engine not running or playback paused
+    if (!engineRunning || !playing)
+    {
+        memset(audioData, 0, sizeof(float) * numFrames);
+        return oboe::DataCallbackResult::Continue;
+    }
+
+    auto *output = static_cast<float *>(audioData);
 
     // ================= MUSICAL CLOCK =================
     framesSincePluck += numFrames;
     int framesPerRefresh = static_cast<int>(pluckIntervalSec * sampleRate);
 
     // Gentle energy refresh (NOT a pluck)
-    if (framesSincePluck >= framesPerRefresh) {
+    if (framesSincePluck >= framesPerRefresh)
+    {
 
         // excite only ONE string at a time
         stringEnvelope[activeString] += 0.2f;
@@ -61,11 +124,13 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
 
     const float twoPi = 2.0f * M_PI;
 
-    for (int i = 0; i < numFrames; i++) {
+    for (int i = 0; i < numFrames; i++)
+    {
 
         float mix = 0.0f;
 
-        for (int s = 0; s < kNumStrings; s++) {
+        for (int s = 0; s < kNumStrings; s++)
+        {
 
             // ---------- SUSTAINED ENVELOPE ----------
             stringEnvelope[s] *= decayRate;
@@ -78,9 +143,9 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
             float phaseInc = twoPi * stringFreq[s] / sampleRate;
 
             float sample =
-                    sin(stringPhase[s]) * 0.6f +
-                    sin(2.0f * stringPhase[s]) * 0.25f +
-                    sin(3.0f * stringPhase[s]) * 0.15f;
+                sin(stringPhase[s]) * 0.6f +
+                sin(2.0f * stringPhase[s]) * 0.25f +
+                sin(3.0f * stringPhase[s]) * 0.15f;
 
             sample *= stringEnvelope[s];
             mix += sample;

@@ -13,9 +13,9 @@ class _PlayButtonState extends State<PlayButton> {
 
   void _toggle() {
     if (isPlaying) {
-      TanpuraEngine.stop();
+      TanpuraEngine.pause();
     } else {
-      TanpuraEngine.start();
+      TanpuraEngine.play();
     }
     setState(() => isPlaying = !isPlaying);
   }

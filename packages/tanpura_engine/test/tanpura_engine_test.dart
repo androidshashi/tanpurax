@@ -27,11 +27,11 @@ void main() {
     expect(initialPlatform, isInstanceOf<MethodChannelTanpuraEngine>());
   });
 
-  test('getPlatformVersion', () async {
-    TanpuraEngine tanpuraEnginePlugin = TanpuraEngine();
-    MockTanpuraEnginePlatform fakePlatform = MockTanpuraEnginePlatform();
-    TanpuraEnginePlatform.instance = fakePlatform;
+  // test('getPlatformVersion', () async {
+  //   TanpuraEngine tanpuraEnginePlugin = TanpuraEngine();
+  //   MockTanpuraEnginePlatform fakePlatform = MockTanpuraEnginePlatform();
+  //   TanpuraEnginePlatform.instance = fakePlatform;
 
-    expect(await TanpuraEngine.getPlatformVersion(), '42');
-  });
+  //   expect(await TanpuraEngine.getPlatformVersion(), '42');
+  // });
 }

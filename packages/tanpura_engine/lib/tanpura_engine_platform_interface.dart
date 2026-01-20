@@ -2,6 +2,10 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'tanpura_engine_method_channel.dart';
 
+/// Platform interface for TanpuraEngine.
+///
+/// This defines the contract that all platform implementations
+/// (MethodChannel, FFI, iOS, etc.) must follow.
 abstract class TanpuraEnginePlatform extends PlatformInterface {
   TanpuraEnginePlatform() : super(token: _token);
 
@@ -16,19 +20,62 @@ abstract class TanpuraEnginePlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<void> start() {
-    throw UnimplementedError('start() has not been implemented.');
-  }
+  // ------------------------------------------------------------
+  // Common methods
+  // ------------------------------------------------------------
 
-  Future<void> stop() {
-    throw UnimplementedError('stop() has not been implemented.');
-  }
-
-  Future<void> setTempo(double intervalSec) {
-    throw UnimplementedError('setTempo() has not been implemented.');
-  }
+  /// Returns the platform version.
 
   Future<String?> getPlatformVersion() {
     throw UnimplementedError('getPlatformVersion() has not been implemented.');
+  }
+
+  // ------------------------------------------------------------
+  // Engine lifecycle
+  // ------------------------------------------------------------
+
+  /// Initializes the native audio engine.
+  ///
+  /// Safe to call multiple times.
+  Future<void> initialize() {
+    throw UnimplementedError('initialize() has not been implemented.');
+  }
+
+  /// Releases native resources and stops the engine.
+  Future<void> release() {
+    throw UnimplementedError('release() has not been implemented.');
+  }
+
+  /// Returns true if the native audio engine is running.
+  Future<bool> isEngineRunning() {
+    throw UnimplementedError('isEngineRunning() has not been implemented.');
+  }
+
+  // ------------------------------------------------------------
+  // Playback lifecycle
+  // ------------------------------------------------------------
+
+  /// Starts tanpura sound playback.
+  Future<void> play() {
+    throw UnimplementedError('play() has not been implemented.');
+  }
+
+  /// Pauses tanpura sound playback.
+  Future<void> pause() {
+    throw UnimplementedError('pause() has not been implemented.');
+  }
+
+  /// Returns true if tanpura sound is currently playing.
+  Future<bool> isPlaying() {
+    throw UnimplementedError('isPlaying() has not been implemented.');
+  }
+
+  // ------------------------------------------------------------
+  // Parameters
+  // ------------------------------------------------------------
+
+  /// Sets tempo (energy refresh interval in seconds).
+  Future<void> setTempo(double intervalSec) {
+    throw UnimplementedError('setTempo() has not been implemented.');
   }
 }

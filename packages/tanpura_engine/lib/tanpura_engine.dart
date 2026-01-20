@@ -1,33 +1,60 @@
-// You have generated a new plugin project without specifying the `--platforms`
-// flag. A plugin project with no platform support was generated. To add a
-// platform, run `flutter create -t plugin --platforms <platforms> .` under the
-// same directory. You can also find a detailed instruction on how to add
-// platforms in the `pubspec.yaml` at
-// https://flutter.dev/to/pubspec-plugin-platforms.
-
 import 'tanpura_engine_platform_interface.dart';
 
-/// This is Tanpura engine
-/// Provides methods to start, stop, and set tempo of the Tanpura sound.
+/// Public API for the Tanpura audio engine.
+///
+/// This API separates:
+/// - Engine lifecycle (initialize / release)
+/// - Playback lifecycle (play / pause)
 class TanpuraEngine {
-  /// Starts the Tanpura sound.
-  static Future<void> start() {
-    return TanpuraEnginePlatform.instance.start();
+  TanpuraEngine._(); // no instances
+
+  /// Returns the platform version.
+  Future<String?> getPlatformVersion() {
+    return TanpuraEnginePlatform.instance.getPlatformVersion();
   }
 
-  /// Stops the Tanpura sound.
-  static Future<void> stop() {
-    return TanpuraEnginePlatform.instance.stop();
+  /// Initializes the native audio engine.
+  ///
+  /// Safe to call multiple times.
+  /// Does NOT start sound playback.
+  static Future<void> initialize() {
+    return TanpuraEnginePlatform.instance.initialize();
   }
 
-  /// Sets the tempo of the Tanpura sound.
-  /// [intervalSec] is the interval in seconds.
+  /// Starts tanpura sound playback.
+  ///
+  /// Engine must be initialized.
+  static Future<void> play() {
+    return TanpuraEnginePlatform.instance.play();
+  }
+
+  /// Pauses tanpura sound playback.
+  ///
+  /// Engine remains alive.
+  static Future<void> pause() {
+    return TanpuraEnginePlatform.instance.pause();
+  }
+
+  /// Releases native resources.
+  ///
+  /// Should be called when the app is done with audio.
+  static Future<void> release() {
+    return TanpuraEnginePlatform.instance.release();
+  }
+
+  /// Sets tempo (energy refresh interval in seconds).
   static Future<void> setTempo(double intervalSec) {
+    assert(intervalSec > 0);
     return TanpuraEnginePlatform.instance.setTempo(intervalSec);
   }
 
-  /// Gets the platform version.
-  static Future<String?> getPlatformVersion() {
-    return TanpuraEnginePlatform.instance.getPlatformVersion();
+  /// Returns true if the native audio engine is running.
+  static Future<bool> isEngineRunning() {
+    return TanpuraEnginePlatform.instance.isEngineRunning();
+  }
+
+  /// Returns true if tanpura sound is currently playing.
+  static Future<bool> isPlaying() {
+    return TanpuraEnginePlatform.instance.isPlaying();
   }
 }
