@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tanpura_engine/enum/engine_enums.dart';
 import 'package:tanpura_engine/tanpura_engine.dart';
 
 class PlayButton extends StatefulWidget {
@@ -11,11 +12,19 @@ class PlayButton extends StatefulWidget {
 class _PlayButtonState extends State<PlayButton> {
   bool isPlaying = false;
 
-  void _toggle() {
+  void _toggle() async {
     if (isPlaying) {
       TanpuraEngine.pause();
     } else {
       TanpuraEngine.play();
+
+      await TanpuraEngine.setFirstString(FirstString.sa);
+      await Future.delayed(Duration(seconds: 5));
+
+      // await TanpuraEngine.setFirstString(FirstString.pa);
+      // await Future.delayed(Duration(seconds: 5));
+
+      // await TanpuraEngine.setFirstString(FirstString.niKomal);
     }
     setState(() => isPlaying = !isPlaying);
   }

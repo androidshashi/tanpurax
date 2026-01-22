@@ -62,17 +62,14 @@ class _TempoSelectorState extends State<TempoSelector> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Row(
-        children: [
-          _buildButton("Slow", Tempo.slow),
-          const SizedBox(width: 12),
-          _buildButton("Medium", Tempo.medium),
-          const SizedBox(width: 12),
-          _buildButton("Fast", Tempo.fast),
-        ],
-      ),
+    return Row(
+      children: [
+        _buildButton("Slow", Tempo.slow),
+        const SizedBox(width: 12),
+        _buildButton("Medium", Tempo.medium),
+        const SizedBox(width: 12),
+        _buildButton("Fast", Tempo.fast),
+      ],
     );
   }
 }

@@ -17,7 +17,12 @@ public:
     bool isPlaying() const;
 
     // ---------------- Parameters ----------------
-    void setTempo(float intervalSec) { pluckIntervalSec = intervalSec; }
+    void setTempo(float intervalSec);
+    // First string / tuning
+    void setFirstString(int firstStringIndex);
+
+    // Master volume
+    void setVolume(float volume);
 
     // ---------------- Audio callback ----------------
     oboe::DataCallbackResult
@@ -31,6 +36,9 @@ private:
 
     // Engine state
     std::atomic<bool> engineRunning{false};
+
+    // Master output volume (0.0 – 1.0)
+    std::atomic<float> masterVolume{0.85f};
 
     // Playback state
     std::atomic<bool> playing{false};
@@ -61,4 +69,15 @@ private:
     // ===== MUSICAL STATE =====
     int framesSincePluck = 0;
     int activeString = 0;
+
+    // Stereo spread
+    float stringPan[4] = {-0.6f, -0.2f, 0.2f, 0.6f}; // L → R
+
+    // Micro timing offsets (samples)
+    float stringTimeOffset[4] = {0, 0, 0, 0};
+    int timingDriftCounter = 0;
+
+    // Micro detune
+    float detuneOffset[4] = {0, 0, 0, 0};
+    int detuneCounter = 0;
 };

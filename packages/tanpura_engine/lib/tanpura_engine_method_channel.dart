@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:tanpura_engine/enum/engine_enums.dart';
 import 'dart:io' show Platform;
 import 'tanpura_engine_platform_interface.dart';
 
@@ -64,5 +65,17 @@ class MethodChannelTanpuraEngine extends TanpuraEnginePlatform {
   @override
   Future<void> setTempo(double intervalSec) async {
     await _channel.invokeMethod('set_tempo', {'interval_sec': intervalSec});
+  }
+
+  @override
+  Future<void> setFirstString(FirstString firstString) async {
+    await _channel.invokeMethod('set_first_string', {
+      'value': firstString.index,
+    });
+  }
+
+  @override
+  Future<void> setVolume(double volume) async {
+    await _channel.invokeMethod('set_volume', {'volume': volume});
   }
 }
