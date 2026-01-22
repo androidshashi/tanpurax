@@ -21,6 +21,9 @@ public:
     // First string / tuning
     void setFirstString(int firstStringIndex);
 
+    // Master volume
+    void setVolume(float volume);
+
     // ---------------- Audio callback ----------------
     oboe::DataCallbackResult
     onAudioReady(
@@ -33,6 +36,9 @@ private:
 
     // Engine state
     std::atomic<bool> engineRunning{false};
+
+    // Master output volume (0.0 – 1.0)
+    std::atomic<float> masterVolume{0.85f};
 
     // Playback state
     std::atomic<bool> playing{false};

@@ -86,4 +86,9 @@ abstract class TanpuraEnginePlatform extends PlatformInterface {
   Future<void> setFirstString(FirstString firstString) {
     throw UnimplementedError('setFirstString() has not been implemented.');
   }
+
+  /// Sets the master volume (0.0 to 1.0).
+  Future<void> setVolume(double volume) {
+    throw UnimplementedError('setVolume() has not been implemented.');
+  }
 }

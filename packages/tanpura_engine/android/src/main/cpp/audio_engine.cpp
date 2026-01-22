@@ -127,6 +127,19 @@ void AudioEngine::setTempo(float intervalSec)
     }
 }
 
+/// @brief Set the master volume
+/// @param volume
+void AudioEngine::setVolume(float volume)
+{
+    if (volume < 0.0f)
+        volume = 0.0f;
+    if (volume > 1.0f)
+        volume = 1.0f;
+    masterVolume.store(volume);
+}
+
+/// @brief Set the first string (Sa) tuning from predefined ratios
+/// @param firstStringIndex
 void AudioEngine::setFirstString(int firstStringIndex)
 {
 
@@ -213,7 +226,6 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
     // }
 
     const float twoPi = 2.0f * M_PI;
-
     // --------------------------------------------------------
     // DSP loop
     // --------------------------------------------------------
@@ -268,8 +280,9 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
         }
 
         // Normalize
-        left *= 0.25f;
-        right *= 0.25f;
+        float gain = masterVolume.load();
+        left *= 0.25f * gain;
+        right *= 0.25f * gain;
 
         // Write interleaved stereo
         output[i * 2] = left;

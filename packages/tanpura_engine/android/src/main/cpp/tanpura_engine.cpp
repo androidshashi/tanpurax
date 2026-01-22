@@ -96,4 +96,13 @@ extern "C"
         engine.setFirstString(static_cast<int>(value));
     }
 
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetVolume(
+        JNIEnv *,
+        jobject,
+        jfloat volume)
+    {
+        engine.setVolume(volume);
+    }
+
 } // extern "C"

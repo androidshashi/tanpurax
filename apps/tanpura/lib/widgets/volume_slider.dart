@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tanpura_engine/tanpura_engine.dart';
 
 class VolumeSlider extends StatefulWidget {
   const VolumeSlider({super.key});
@@ -25,6 +26,7 @@ class _VolumeSliderState extends State<VolumeSlider> {
               volume = value;
             });
             // Phase 2: Send volume to native engine
+            TanpuraEngine.setVolume(volume);
           },
         ),
       ],

@@ -30,6 +30,8 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private external fun nativeSetTempo(intervalSec: Float)
     private external fun nativeSetFirstString(value: Int)
 
+    private external fun nativeSetVolume(volume: Float)
+
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(
             binding.binaryMessenger,
@@ -102,6 +104,13 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                         null
                     )
                 }
+            }
+            "set_volume" -> {
+                val volume = call.argument<Double>("volume")?.toFloat()
+                if (volume != null) {
+                    nativeSetVolume(volume)
+                }
+                result.success(null)
             }
 
             else -> result.notImplemented()

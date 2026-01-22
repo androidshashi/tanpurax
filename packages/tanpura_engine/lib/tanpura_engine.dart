@@ -66,4 +66,9 @@ class TanpuraEngine {
   static Future<bool> isPlaying() {
     return TanpuraEnginePlatform.instance.isPlaying();
   }
+
+  /// Sets the master volume (0.0 to 1.0).
+  static Future<void> setVolume(double volume) {
+    return TanpuraEnginePlatform.instance.setVolume(volume);
+  }
 }
