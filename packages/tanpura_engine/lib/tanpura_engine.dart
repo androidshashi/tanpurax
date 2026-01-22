@@ -1,3 +1,5 @@
+import 'package:tanpura_engine/enum/engine_enums.dart';
+
 import 'tanpura_engine_platform_interface.dart';
 
 /// Public API for the Tanpura audio engine.
@@ -7,6 +9,13 @@ import 'tanpura_engine_platform_interface.dart';
 /// - Playback lifecycle (play / pause)
 class TanpuraEngine {
   TanpuraEngine._(); // no instances
+
+  /// Sets the first string (tonal center) of the tanpura.
+  ///
+  /// This affects the base pitch of the entire drone.
+  static Future<void> setFirstString(FirstString firstString) {
+    return TanpuraEnginePlatform.instance.setFirstString(firstString);
+  }
 
   /// Returns the platform version.
   Future<String?> getPlatformVersion() {

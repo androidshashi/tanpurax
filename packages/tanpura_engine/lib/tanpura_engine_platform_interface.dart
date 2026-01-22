@@ -1,4 +1,5 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:tanpura_engine/enum/engine_enums.dart';
 
 import 'tanpura_engine_method_channel.dart';
 
@@ -77,5 +78,12 @@ abstract class TanpuraEnginePlatform extends PlatformInterface {
   /// Sets tempo (energy refresh interval in seconds).
   Future<void> setTempo(double intervalSec) {
     throw UnimplementedError('setTempo() has not been implemented.');
+  }
+
+  /// Sets the first string (tonal center) of the tanpura.
+  ///
+  /// This affects the base pitch of the entire drone.
+  Future<void> setFirstString(FirstString firstString) {
+    throw UnimplementedError('setFirstString() has not been implemented.');
   }
 }

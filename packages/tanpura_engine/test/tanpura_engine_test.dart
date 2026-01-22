@@ -11,10 +11,10 @@ class MockTanpuraEnginePlatform
   Future<String?> getPlatformVersion() => Future.value('42');
 
   @override
-  Future<void> start() => Future.value();
+  Future<void> initialize() => Future.value();
 
   @override
-  Future<void> stop() => Future.value();
+  Future<void> release() => Future.value();
 
   @override
   Future<void> setTempo(double intervalSec) => Future.value();

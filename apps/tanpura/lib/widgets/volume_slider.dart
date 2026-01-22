@@ -12,25 +12,22 @@ class _VolumeSliderState extends State<VolumeSlider> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Volume", style: TextStyle(color: Colors.white70)),
-          Slider(
-            value: volume,
-            min: 0,
-            max: 1,
-            onChanged: (value) {
-              setState(() {
-                volume = value;
-              });
-              // Phase 2: Send volume to native engine
-            },
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Volume", style: TextStyle(color: Colors.white70)),
+        Slider(
+          value: volume,
+          min: 0,
+          max: 1,
+          onChanged: (value) {
+            setState(() {
+              volume = value;
+            });
+            // Phase 2: Send volume to native engine
+          },
+        ),
+      ],
     );
   }
 }

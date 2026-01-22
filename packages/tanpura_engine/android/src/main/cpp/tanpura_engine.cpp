@@ -7,84 +7,93 @@ static AudioEngine engine;
 extern "C"
 {
 
-        // ------------------------------------------------------------
-        // Engine lifecycle
-        // ------------------------------------------------------------
+    // ------------------------------------------------------------
+    // Engine lifecycle
+    // ------------------------------------------------------------
 
-        JNIEXPORT void JNICALL
-        Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeInitialize(
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeInitialize(
+        JNIEnv *, jobject)
+    {
+        engine.initialize(); // internal engine start
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeRelease(
+        JNIEnv
+            *,
+        jobject)
+    {
+        engine.
+
+            release(); // internal engine stop
+    }
+
+    JNIEXPORT jboolean
+
+        JNICALL
+        Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeIsEngineRunning(
             JNIEnv *, jobject)
-        {
-                engine.initialize(); // internal engine start
-        }
+    {
+        return engine.isEngineRunning();
+    }
 
-        JNIEXPORT void JNICALL
-        Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeRelease(
-            JNIEnv
-                *,
-            jobject)
-        {
-                engine.
+    // ------------------------------------------------------------
+    // Playback lifecycle
+    // ------------------------------------------------------------
 
-                    release(); // internal engine stop
-        }
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativePlay(
+        JNIEnv
+            *,
+        jobject)
+    {
+        engine.
 
-        JNIEXPORT jboolean
+            play();
+    }
 
-            JNICALL
-            Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeIsEngineRunning(
-                JNIEnv *, jobject)
-        {
-                return engine.isEngineRunning();
-        }
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativePause(
+        JNIEnv
+            *,
+        jobject)
+    {
+        engine.
 
-        // ------------------------------------------------------------
-        // Playback lifecycle
-        // ------------------------------------------------------------
+            pause();
+    }
 
-        JNIEXPORT void JNICALL
-        Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativePlay(
-            JNIEnv
-                *,
-            jobject)
-        {
-                engine.
+    JNIEXPORT jboolean
 
-                    play();
-        }
+        JNICALL
+        Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeIsPlaying(
+            JNIEnv *, jobject)
+    {
+        return engine.isPlaying();
+    }
 
-        JNIEXPORT void JNICALL
-        Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativePause(
-            JNIEnv
-                *,
-            jobject)
-        {
-                engine.
+    // ------------------------------------------------------------
+    // Parameters
+    // ------------------------------------------------------------
 
-                    pause();
-        }
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetTempo(
+        JNIEnv
+            *,
+        jobject,
+        jfloat intervalSec)
+    {
+        engine.setTempo(intervalSec);
+    }
 
-        JNIEXPORT jboolean
-
-            JNICALL
-            Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeIsPlaying(
-                JNIEnv *, jobject)
-        {
-                return engine.isPlaying();
-        }
-
-        // ------------------------------------------------------------
-        // Parameters
-        // ------------------------------------------------------------
-
-        JNIEXPORT void JNICALL
-        Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetTempo(
-            JNIEnv
-                *,
-            jobject,
-            jfloat intervalSec)
-        {
-                engine.setTempo(intervalSec);
-        }
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetFirstString(
+        JNIEnv *,
+        jobject,
+        jint value)
+    {
+        engine.setFirstString(static_cast<int>(value));
+    }
 
 } // extern "C"

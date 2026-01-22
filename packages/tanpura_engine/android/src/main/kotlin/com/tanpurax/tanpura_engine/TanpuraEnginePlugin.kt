@@ -28,7 +28,7 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private external fun nativeIsPlaying(): Boolean
 
     private external fun nativeSetTempo(intervalSec: Float)
-
+    private external fun nativeSetFirstString(value: Int)
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(
@@ -87,6 +87,21 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     nativeSetTempo(interval)
                 }
                 result.success(null)
+            }
+
+            "set_first_string" -> {
+                val value = call.argument<Int>("value")
+
+                if (value != null) {
+                    nativeSetFirstString(value)
+                    result.success(null)
+                } else {
+                    result.error(
+                        "INVALID_ARGUMENT",
+                        "First string value is required",
+                        null
+                    )
+                }
             }
 
             else -> result.notImplemented()
