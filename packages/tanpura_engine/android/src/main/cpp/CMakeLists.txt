@@ -15,7 +15,10 @@ add_library(
         SHARED
         tanpura_engine.cpp
         audio_engine.cpp
+        sample_player.cpp
+        wav_loader.cpp
 )
+
 
 # ----------------------------------------
 # Include paths

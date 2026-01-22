@@ -2,6 +2,7 @@
 #include <oboe/Oboe.h>
 #include <atomic>
 #include <memory>
+#include "sample_player.h"
 
 class AudioEngine : public oboe::AudioStreamCallback
 {
@@ -30,6 +31,8 @@ public:
         oboe::AudioStream *audioStream,
         void *audioData,
         int32_t numFrames) override;
+    // Load tanpura WAV samples (called from JNI, NOT audio thread)
+    void load_tanpura_sample(const std::vector<float> &samples);
 
 private:
     std::shared_ptr<oboe::AudioStream> stream;
@@ -80,4 +83,11 @@ private:
     // Micro detune
     float detuneOffset[4] = {0, 0, 0, 0};
     int detuneCounter = 0;
+
+    sample_player tanpura_sample;
+    float playback_rate = 1.0f;
+
+    float stereo_width = 0.6f; // 0.0 mono → 1.0 wide
+
+    float breath_phase = 0.0f;
 };

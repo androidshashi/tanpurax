@@ -1,5 +1,7 @@
 #include <jni.h>
 #include "audio_engine.h"
+#include "wav_loader.h"
+#include <android/asset_manager_jni.h>
 
 // Single global engine instance
 static AudioEngine engine;
@@ -13,8 +15,22 @@ extern "C"
 
     JNIEXPORT void JNICALL
     Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeInitialize(
-        JNIEnv *, jobject)
+        JNIEnv *env, jobject, jobject assetManager)
     {
+        AAssetManager *mgr =
+            AAssetManager_fromJava(env, assetManager);
+
+        std::vector<float> wav;
+        int sr = 0;
+
+        load_wav_from_assets(
+            mgr,
+            "audio/tanpura_c_loop.wav",
+            wav,
+            sr);
+
+        engine.load_tanpura_sample(wav);
+
         engine.initialize(); // internal engine start
     }
 

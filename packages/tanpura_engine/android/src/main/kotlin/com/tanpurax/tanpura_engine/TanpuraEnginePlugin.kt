@@ -5,10 +5,13 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import android.content.Context
+import android.content.res.AssetManager
 
 class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     private lateinit var channel: MethodChannel
+    private lateinit var appContext: Context
 
     companion object {
         init {
@@ -18,7 +21,7 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     }
 
     // ===== JNI FUNCTIONS =====
-    private external fun nativeInitialize()
+    external fun nativeInitialize(assetManager: AssetManager)
     private external fun nativeRelease()
 
     private external fun nativePlay()
@@ -38,6 +41,7 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             "com.tanpurax.tanpura/tanpura_audio"
         )
         channel.setMethodCallHandler(this)
+        appContext = binding.applicationContext
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -48,7 +52,7 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             // ------------------------------------------------------------
 
             "initialize" -> {
-                nativeInitialize()
+                nativeInitialize(appContext.assets)
                 result.success(null)
             }
 
