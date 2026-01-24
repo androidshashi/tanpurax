@@ -114,7 +114,10 @@ bool AudioEngine::isPlaying() const
 
 void AudioEngine::load_tanpura_sample(const std::vector<float> &samples)
 {
-    tanpura_sample.load(samples);
+    for (int i = 0; i < kNumStrings; i++)
+    {
+        strings[i].load(samples);
+    }
 }
 
 // ------------------------------------------------------------
@@ -143,8 +146,12 @@ void AudioEngine::setVolume(float volume)
 /// @param firstStringIndex
 void AudioEngine::setFirstString(int firstStringIndex)
 {
+    if (firstStringIndex < 0)
+        firstStringIndex = 0;
+    if (firstStringIndex >= kNumFirstStrings)
+        firstStringIndex = kNumFirstStrings - 1;
 
-    playback_rate = kFirstStringRatios[firstStringIndex];
+    base_rate = kFirstStringRatios[firstStringIndex];
 }
 
 // ------------------------------------------------------------
@@ -166,25 +173,57 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
 
     for (int i = 0; i < numFrames; i++)
     {
-        float s = tanpura_sample.process(playback_rate);
+        float mix = 0.0f;
 
-        // 1️⃣ Jawari-style soft saturation
-        s = tanhf(s * 2.5f);
+        // ------------------------------------------------
+        // 4-string tanpura layering (Sa–Pa–Sa–Sa)
+        // ------------------------------------------------
+        for (int s = 0; s < kNumStrings; s++)
+        {
+            float rate =
+                base_rate *
+                string_rate[s] *
+                (1.0f + string_detune[s]);
 
-        // 2️⃣ Slow amplitude breathing (ADD HERE 👇)
-        breath_phase += 0.00015f; // very slow
+            float v = strings[s].process(rate);
+            mix += v * string_gain[s];
+        }
+
+        // ------------------------------------------------
+        // Jawari-style saturation
+        // ------------------------------------------------
+        mix = tanhf(mix * 2.2f);
+
+        // ------------------------------------------------
+        // Slow amplitude breathing
+        // ------------------------------------------------
+        breath_phase += 0.00015f;
         if (breath_phase > 2.0f * M_PI)
             breath_phase -= 2.0f * M_PI;
 
         float breath = 0.97f + 0.03f * sinf(breath_phase);
-        s *= breath;
+        mix *= breath;
 
-        // 3️⃣ Proper gain staging
-        s *= 1.4f * masterVolume.load();
+        // ------------------------------------------------
+        // Final gain
+        // ------------------------------------------------
+        mix *= 1.25f * masterVolume.load();
 
-        // 4️⃣ Stereo width
-        float left = s * (1.0f - stereo_width * 0.3f);
-        float right = s * (1.0f + stereo_width * 0.3f);
+        // ------------------------------------------------
+        // Stereo image (string-based width)
+        // ------------------------------------------------
+        float left = 0.0f;
+        float right = 0.0f;
+
+        for (int s = 0; s < kNumStrings; s++)
+        {
+            float pan = string_pan[s] * stereo_width;
+            float lg = sqrtf(0.5f * (1.0f - pan));
+            float rg = sqrtf(0.5f * (1.0f + pan));
+
+            left += mix * lg * 0.25f;
+            right += mix * rg * 0.25f;
+        }
 
         output[i * 2] = left;
         output[i * 2 + 1] = right;

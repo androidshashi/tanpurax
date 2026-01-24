@@ -52,42 +52,27 @@ private:
     // ===== TEMPO =====
     float pluckIntervalSec = 0.5f; // slow energy refresh
 
-    // ===== TANPURA STRINGS (Sa–Pa–Sa–Sa) =====
-    static constexpr int kNumStrings = 4;
-
-    float stringFreq[kNumStrings] = {
-        130.81f, // Sa
-        196.00f, // Pa
-        130.81f, // Sa
-        130.81f  // Sa
-    };
-
-    float stringPhase[kNumStrings] = {0};
-    float stringEnvelope[kNumStrings] = {0.4f, 0.4f, 0.4f, 0.4f};
-
-    // ===== DRONE ENVELOPE =====
-    float decayRate = 0.9997f;
-    float sustainLevel = 0.35f;
-
-    // ===== MUSICAL STATE =====
-    int framesSincePluck = 0;
-    int activeString = 0;
-
-    // Stereo spread
-    float stringPan[4] = {-0.6f, -0.2f, 0.2f, 0.6f}; // L → R
-
-    // Micro timing offsets (samples)
-    float stringTimeOffset[4] = {0, 0, 0, 0};
-    int timingDriftCounter = 0;
-
-    // Micro detune
-    float detuneOffset[4] = {0, 0, 0, 0};
-    int detuneCounter = 0;
-
     sample_player tanpura_sample;
     float playback_rate = 1.0f;
 
-    float stereo_width = 0.6f; // 0.0 mono → 1.0 wide
+    static constexpr int kNumStrings = 4;
 
+    sample_player strings[kNumStrings];
+
+    // base Sa rate (changes with scale / octave)
+    float base_rate = 1.0f;
+
+    // per-string offsets
+    float string_rate[kNumStrings] = {1.0f, 1.5f, 1.0f, 1.0f};
+    float string_detune[kNumStrings] = {0.0f, -0.003f, 0.002f, -0.0015f};
+    float string_gain[kNumStrings] = {0.28f, 0.22f, 0.26f, 0.24f};
+    float string_pan[kNumStrings] = {-0.6f, -0.2f, 0.2f, 0.6f};
+
+    // breathing
     float breath_phase = 0.0f;
+
+    // stereo
+    float stereo_width = 0.6f;
+
+    float detune_phase[4] = {0, 0, 0, 0};
 };
