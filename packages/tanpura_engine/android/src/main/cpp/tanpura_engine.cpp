@@ -121,4 +121,22 @@ extern "C"
         engine.setVolume(volume);
     }
 
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetScale(
+        JNIEnv *,
+        jobject,
+        jint value)
+    {
+        engine.setScale(static_cast<int>(value));
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetOctave(
+        JNIEnv *,
+        jobject,
+        jint value)
+    {
+        engine.setOctave(static_cast<int>(value));
+    }
+
 } // extern "C"

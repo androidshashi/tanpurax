@@ -91,4 +91,14 @@ abstract class TanpuraEnginePlatform extends PlatformInterface {
   Future<void> setVolume(double volume) {
     throw UnimplementedError('setVolume() has not been implemented.');
   }
+
+  /// Sets the scale (C, C#, D, ...).
+  Future<void> setScale(int scale) {
+    throw UnimplementedError('setScale() has not been implemented.');
+  }
+
+  /// Sets the octave shift (-1, 0, +1).
+  Future<void> setOctave(int octave) {
+    throw UnimplementedError('setOctave() has not been implemented.');
+  }
 }

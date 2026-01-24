@@ -78,4 +78,14 @@ class MethodChannelTanpuraEngine extends TanpuraEnginePlatform {
   Future<void> setVolume(double volume) async {
     await _channel.invokeMethod('set_volume', {'volume': volume});
   }
-}
+
+  @override
+  Future<void> setScale(int scale) async {
+    await _channel.invokeMethod('set_scale', {'value': scale});
+  }
+
+  @override
+  Future<void> setOctave(int octave) async {
+    await _channel.invokeMethod('set_octave', {'value': octave});
+  }
+  }
