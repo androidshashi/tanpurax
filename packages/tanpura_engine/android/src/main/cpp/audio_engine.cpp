@@ -7,14 +7,6 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "TanpuraEngine", __VA_ARGS__)
 
 // ------------------------------------------------------------
-// Utility
-// ------------------------------------------------------------
-static float randomFloat(float min, float max)
-{
-    return min + (float(rand()) / float(RAND_MAX)) * (max - min);
-}
-
-// ------------------------------------------------------------
 // First string ratios (relative to Sa)
 // ------------------------------------------------------------
 static constexpr float kFirstStringRatios[] = {
@@ -103,17 +95,26 @@ void AudioEngine::play()
 {
     if (!engineRunning)
         return;
+    LOGI("playing");
     playing = true;
 }
 
 void AudioEngine::pause()
 {
+    if (!engineRunning)
+        return;
+    LOGI("paused");
     playing = false;
 }
 
 bool AudioEngine::isPlaying() const
 {
     return playing;
+}
+
+void AudioEngine::load_tanpura_sample(const std::vector<float> &samples)
+{
+    tanpura_sample.load(samples);
 }
 
 // ------------------------------------------------------------
@@ -143,26 +144,7 @@ void AudioEngine::setVolume(float volume)
 void AudioEngine::setFirstString(int firstStringIndex)
 {
 
-    if (firstStringIndex < 0)
-        firstStringIndex = 0;
-    else if (firstStringIndex >= kNumFirstStrings)
-        firstStringIndex = kNumFirstStrings - 1;
-
-    constexpr float baseSaFreq = 146.83f; // Sa reference
-
-    float baseFreq =
-        baseSaFreq * kFirstStringRatios[firstStringIndex];
-
-    // Typical tanpura layout: Sa – Sa – Pa – Sa
-    stringFreq[0] = baseFreq;
-    stringFreq[1] = baseFreq;
-    stringFreq[2] = baseFreq * 1.5f; // Pa
-    stringFreq[3] = baseFreq;
-
-    for (int i = 0; i < kNumStrings; i++)
-    {
-        stringPhase[i] = 0.0f;
-    }
+    playback_rate = kFirstStringRatios[firstStringIndex];
 }
 
 // ------------------------------------------------------------
@@ -182,109 +164,28 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
         return oboe::DataCallbackResult::Continue;
     }
 
-    // --------------------------------------------------------
-    // Slow micro-detune (~1–2 sec)
-    // --------------------------------------------------------
-    detuneCounter += numFrames;
-    if (detuneCounter > sampleRate * 1.5f)
-    {
-        for (int s = 0; s < kNumStrings; s++)
-        {
-            detuneOffset[s] = randomFloat(-0.0025f, 0.0025f);
-        }
-        detuneCounter = 0;
-    }
-
-    // --------------------------------------------------------
-    // Slow micro timing drift (~2–3 sec)
-    // --------------------------------------------------------
-    timingDriftCounter += numFrames;
-    if (timingDriftCounter > sampleRate * 2.5f)
-    {
-        for (int s = 0; s < kNumStrings; s++)
-        {
-            stringTimeOffset[s] = randomFloat(-3.0f, 3.0f); // samples
-        }
-        timingDriftCounter = 0;
-    }
-
-    // // --------------------------------------------------------
-    // // Musical clock (energy refresh)
-    // // --------------------------------------------------------
-    // framesSincePluck += numFrames;
-    // int framesPerRefresh = static_cast<int>(pluckIntervalSec * sampleRate);
-
-    // if (framesSincePluck >= framesPerRefresh)
-    // {
-
-    //     stringEnvelope[activeString] += 0.2f;
-    //     if (stringEnvelope[activeString] > 1.0f)
-    //         stringEnvelope[activeString] = 1.0f;
-
-    //     activeString = (activeString + 1) % kNumStrings;
-    //     framesSincePluck = 0;
-    // }
-
-    const float twoPi = 2.0f * M_PI;
-    // --------------------------------------------------------
-    // DSP loop
-    // --------------------------------------------------------
     for (int i = 0; i < numFrames; i++)
     {
+        float s = tanpura_sample.process(playback_rate);
 
-        float left = 0.0f;
-        float right = 0.0f;
+        // 1️⃣ Jawari-style soft saturation
+        s = tanhf(s * 2.5f);
 
-        for (int s = 0; s < kNumStrings; s++)
-        {
+        // 2️⃣ Slow amplitude breathing (ADD HERE 👇)
+        breath_phase += 0.00015f; // very slow
+        if (breath_phase > 2.0f * M_PI)
+            breath_phase -= 2.0f * M_PI;
 
-            // Envelope decay (never dies)
-            stringEnvelope[s] *= decayRate;
-            if (stringEnvelope[s] < sustainLevel)
-                stringEnvelope[s] = sustainLevel;
+        float breath = 0.97f + 0.03f * sinf(breath_phase);
+        s *= breath;
 
-            // ---------- CONTINUOUS APERIODIC ENERGY ----------
-            float energy = randomFloat(0.00005f, 0.00015f);
-            stringEnvelope[s] += energy;
+        // 3️⃣ Proper gain staging
+        s *= 1.4f * masterVolume.load();
 
-            if (stringEnvelope[s] > 1.0f)
-                stringEnvelope[s] = 1.0f;
+        // 4️⃣ Stereo width
+        float left = s * (1.0f - stereo_width * 0.3f);
+        float right = s * (1.0f + stereo_width * 0.3f);
 
-            // Phase increment (with micro-detune)
-            float phaseInc =
-                twoPi *
-                (stringFreq[s] * (1.0f + detuneOffset[s])) /
-                sampleRate;
-
-            float sample =
-                sinf(stringPhase[s]) * 0.6f +
-                sinf(2.0f * stringPhase[s]) * 0.25f +
-                sinf(3.0f * stringPhase[s]) * 0.15f;
-
-            sample *= stringEnvelope[s];
-
-            // Stereo pan (constant-power)
-            float pan = stringPan[s];
-            float lGain = sqrtf(0.5f * (1.0f - pan));
-            float rGain = sqrtf(0.5f * (1.0f + pan));
-
-            left += sample * lGain;
-            right += sample * rGain;
-
-            // Phase advance with micro timing offset
-            stringPhase[s] +=
-                phaseInc + (stringTimeOffset[s] * phaseInc * 0.001f);
-
-            if (stringPhase[s] > twoPi)
-                stringPhase[s] -= twoPi;
-        }
-
-        // Normalize
-        float gain = masterVolume.load();
-        left *= 0.25f * gain;
-        right *= 0.25f * gain;
-
-        // Write interleaved stereo
         output[i * 2] = left;
         output[i * 2 + 1] = right;
     }

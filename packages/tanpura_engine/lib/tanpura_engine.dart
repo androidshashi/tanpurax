@@ -18,7 +18,7 @@ class TanpuraEngine {
   }
 
   /// Returns the platform version.
-  Future<String?> getPlatformVersion() {
+  static Future<String?> getPlatformVersion() {
     return TanpuraEnginePlatform.instance.getPlatformVersion();
   }
 
