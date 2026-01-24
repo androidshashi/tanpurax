@@ -9,7 +9,8 @@
             "name": "tanpura",
             "cwd": "apps/tanpura",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "preLaunchTask": "pre-launch-script"
         },
         {
             "name": "tanpura (profile mode)",
