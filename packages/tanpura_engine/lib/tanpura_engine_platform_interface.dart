@@ -91,4 +91,14 @@ abstract class TanpuraEnginePlatform extends PlatformInterface {
   Future<void> setVolume(double volume) {
     throw UnimplementedError('setVolume() has not been implemented.');
   }
+
+  /// Sets the scale/pitch (base frequency of Sa).
+  Future<void> setScale(Scale scale) {
+    throw UnimplementedError('setScale() has not been implemented.');
+  }
+
+  /// Exports audio to a WAV file.
+  Future<bool> exportWav(String filePath, double durationSec) {
+    throw UnimplementedError('exportWav() has not been implemented.');
+  }
 }

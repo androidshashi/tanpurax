@@ -20,9 +20,14 @@ public:
     void setTempo(float intervalSec);
     // First string / tuning
     void setFirstString(int firstStringIndex);
+    // Scale / pitch (base frequency of Sa)
+    void setScale(int scaleIndex);
 
     // Master volume
     void setVolume(float volume);
+
+    // ---------------- Export ----------------
+    bool exportToWav(const char* filePath, float durationSec);
 
     // ---------------- Audio callback ----------------
     oboe::DataCallbackResult
@@ -49,26 +54,37 @@ private:
     // ===== TEMPO =====
     std::atomic<float> pluckIntervalSec{0.5f}; // interval between string plucks
 
+    // ===== SCALE / PITCH =====
+    std::atomic<int> currentScale{2};  // Default D (index 2)
+    int currentFirstString = 0;         // Track current first string for recalc
+    void updateStringFrequencies();     // Recalculate frequencies
+
     // ===== TANPURA STRINGS (Sa–Pa–Sa–Sa) =====
     static constexpr int kNumStrings = 4;
 
     float stringFreq[kNumStrings] = {
-        130.81f, // Sa
-        196.00f, // Pa
-        130.81f, // Sa
-        130.81f  // Sa
+        146.83f, // Sa (D3)
+        220.25f, // Pa
+        146.83f, // Sa
+        146.83f  // Sa
     };
 
     float stringPhase[kNumStrings] = {0};
-    float stringEnvelope[kNumStrings] = {0.6f, 0.6f, 0.6f, 0.6f};
+    float stringEnvelope[kNumStrings] = {0.0f, 0.0f, 0.0f, 0.0f};
 
     // ===== DRONE ENVELOPE =====
-    float decayRate = 0.9998f;    // Slower decay for fuller sustain
-    float sustainLevel = 0.5f;    // Higher sustain for louder drone
+    // Attack/decay rates per sample (very smooth transitions)
+    float attackRate = 0.00008f;   // Slower attack (~0.25s to peak) for smoother transitions
+    float decayRate = 0.999985f;   // Much slower decay - string sustains ~3-4 seconds
+    float sustainLevel = 0.65f;    // Higher floor level - reduces volume pumping dramatically
 
-    // ===== MUSICAL STATE =====
+    // ===== PLUCKING STATE =====
     int framesSincePluck = 0;
     int activeString = 0;
+
+    // Per-string pluck state (time since each string was plucked)
+    int stringAge[kNumStrings] = {0, 0, 0, 0};
+    bool stringRising[kNumStrings] = {false, false, false, false};
 
     // Stereo spread
     float stringPan[4] = {-0.6f, -0.2f, 0.2f, 0.6f}; // L → R

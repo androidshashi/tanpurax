@@ -31,6 +31,8 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private external fun nativeSetFirstString(value: Int)
 
     private external fun nativeSetVolume(volume: Float)
+    private external fun nativeSetScale(value: Int)
+    private external fun nativeExportWav(filePath: String, durationSec: Float): Boolean
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(
@@ -111,6 +113,35 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                     nativeSetVolume(volume)
                 }
                 result.success(null)
+            }
+
+            "set_scale" -> {
+                val value = call.argument<Int>("value")
+                if (value != null) {
+                    nativeSetScale(value)
+                    result.success(null)
+                } else {
+                    result.error(
+                        "INVALID_ARGUMENT",
+                        "Scale value is required",
+                        null
+                    )
+                }
+            }
+
+            "export_wav" -> {
+                val filePath = call.argument<String>("file_path")
+                val duration = call.argument<Double>("duration")?.toFloat() ?: 5.0f
+                if (filePath != null) {
+                    val success = nativeExportWav(filePath, duration)
+                    result.success(success)
+                } else {
+                    result.error(
+                        "INVALID_ARGUMENT",
+                        "File path is required",
+                        null
+                    )
+                }
             }
 
             else -> result.notImplemented()

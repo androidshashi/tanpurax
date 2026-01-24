@@ -71,4 +71,15 @@ class TanpuraEngine {
   static Future<void> setVolume(double volume) {
     return TanpuraEnginePlatform.instance.setVolume(volume);
   }
+
+  /// Sets the scale/pitch (base frequency of Sa).
+  static Future<void> setScale(Scale scale) {
+    return TanpuraEnginePlatform.instance.setScale(scale);
+  }
+
+  /// Exports audio to a WAV file.
+  /// Returns true if successful.
+  static Future<bool> exportWav(String filePath, {double durationSec = 5.0}) {
+    return TanpuraEnginePlatform.instance.exportWav(filePath, durationSec);
+  }
 }

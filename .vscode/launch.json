@@ -9,6 +9,20 @@
             "cwd": "apps/tanpura",
             "request": "launch",
             "type": "dart",
+            "preLaunchTask": "pre-launch-script",
+            "program": "lib/main_dev.dart",
+            "toolArgs": [
+                "--flavor",
+                "dev",
+                "--dart-define=FLAVOR=dev"
+            ]
+        },
+        {
+            "name": "tanpura (profile mode)",
+            "cwd": "apps/tanpura",
+            "request": "launch",
+            "type": "dart",
+            "preLaunchTask": "pre-launch-script",
             "program": "lib/main_dev.dart",
             "toolArgs": [
                 "--flavor",
@@ -21,6 +35,7 @@
             "cwd": "apps/tanpura",
             "request": "launch",
             "type": "dart",
+            "preLaunchTask": "pre-launch-script",
             "program": "lib/main_staging.dart",
             "toolArgs": [
                 "--flavor",

@@ -105,4 +105,30 @@ extern "C"
         engine.setVolume(volume);
     }
 
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetScale(
+        JNIEnv *,
+        jobject,
+        jint value)
+    {
+        engine.setScale(static_cast<int>(value));
+    }
+
+    // ------------------------------------------------------------
+    // Export
+    // ------------------------------------------------------------
+
+    JNIEXPORT jboolean JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeExportWav(
+        JNIEnv *env,
+        jobject,
+        jstring filePath,
+        jfloat durationSec)
+    {
+        const char *path = env->GetStringUTFChars(filePath, nullptr);
+        bool result = engine.exportToWav(path, durationSec);
+        env->ReleaseStringUTFChars(filePath, path);
+        return result;
+    }
+
 } // extern "C"

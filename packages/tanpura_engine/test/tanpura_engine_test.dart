@@ -55,6 +55,18 @@ class MockTanpuraEnginePlatform
     // TODO: implement setVolume
     throw UnimplementedError();
   }
+
+  @override
+  Future<bool> exportWav(String filePath, double durationSec) {
+    // TODO: implement exportWav
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> setScale(Scale scale) {
+    // TODO: implement setScale
+    throw UnimplementedError();
+  }
 }
 
 void main() {

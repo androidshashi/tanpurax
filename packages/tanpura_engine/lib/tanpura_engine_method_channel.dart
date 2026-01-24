@@ -78,4 +78,18 @@ class MethodChannelTanpuraEngine extends TanpuraEnginePlatform {
   Future<void> setVolume(double volume) async {
     await _channel.invokeMethod('set_volume', {'volume': volume});
   }
+
+  @override
+  Future<void> setScale(Scale scale) async {
+    await _channel.invokeMethod('set_scale', {'value': scale.index});
+  }
+
+  @override
+  Future<bool> exportWav(String filePath, double durationSec) async {
+    final result = await _channel.invokeMethod<bool>('export_wav', {
+      'file_path': filePath,
+      'duration': durationSec,
+    });
+    return result ?? false;
+  }
 }
