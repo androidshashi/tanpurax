@@ -14,6 +14,7 @@ class MockTanpuraEnginePlatform
   double _tempo = 1.0;
   double _volume = 1.0;
   FirstString _firstString = FirstString.sa;
+  int _scale = 0;
 
   // Track method calls
   final List<String> _methodCalls = [];
@@ -85,6 +86,14 @@ class MockTanpuraEnginePlatform
   double get tempo => _tempo;
   double get volume => _volume;
   FirstString get firstString => _firstString;
+  int get scale => _scale;
+
+  @override
+  Future<void> setScale(int scale) {
+    _methodCalls.add('setScale');
+    _scale = scale;
+    return Future.value();
+  }
 }
 
 void main() {
@@ -150,6 +159,12 @@ void main() {
       await TanpuraEngine.setFirstString(FirstString.pa);
       final mock = TanpuraEnginePlatform.instance as MockTanpuraEnginePlatform;
       expect(mock.firstString, FirstString.pa);
+    });
+
+    test('setScale() changes scale', () async {
+      await TanpuraEngine.setScale(3);
+      final mock = TanpuraEnginePlatform.instance as MockTanpuraEnginePlatform;
+      expect(mock.scale, 3);
     });
   });
 }

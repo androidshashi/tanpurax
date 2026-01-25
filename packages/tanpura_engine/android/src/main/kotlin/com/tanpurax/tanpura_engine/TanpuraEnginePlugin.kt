@@ -35,6 +35,10 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
     private external fun nativeSetVolume(volume: Float)
 
+    private external fun nativeSetScale(value: Int)
+
+    private external fun nativeSetOctave(value: Int)
+
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(
             binding.binaryMessenger,
@@ -117,7 +121,39 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                 result.success(null)
             }
 
-            else -> result.notImplemented()
+            "set_scale" -> {
+                val value = call.argument<Int>("value")
+
+                if (value != null) {
+                    nativeSetScale(value)
+                    result.success(null)
+                } else {
+                    result.error(
+                        "INVALID_ARGUMENT",
+                        "Scale value is required",
+                        null
+                    )
+                }
+            }
+
+            "set_octave" -> {   
+                val value = call.argument<Int>("value")
+
+                if (value != null) {    
+                    nativeSetOctave(value)
+                    result.success(null)
+                } else {
+                    result.error(
+                        "INVALID_ARGUMENT",
+                        "Octave value is required",
+                        null
+                    )
+                }
+            }
+
+            else -> {
+                result.notImplemented()
+            }
         }
     }
 

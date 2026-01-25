@@ -19,11 +19,18 @@ public:
 
     // ---------------- Parameters ----------------
     void setTempo(float intervalSec);
+
     // First string / tuning
     void setFirstString(int firstStringIndex);
 
     // Master volume
     void setVolume(float volume);
+
+    // Scale (C, C#, D, ...)
+    void setScale(int scaleIndex);
+
+    // Octave shift
+    void setOctave(int octave); // -1, 0, +1
 
     // ---------------- Audio callback ----------------
     oboe::DataCallbackResult
@@ -59,8 +66,12 @@ private:
 
     sample_player strings[kNumStrings];
 
-    // base Sa rate (changes with scale / octave)
-    float base_rate = 1.0f;
+    // ==================================================
+    // Pitch/Scale control
+    // ==================================================
+    float scale_rate = 1.0f;        // C, C#, D, ...
+    float first_string_rate = 1.0f; // Sa, Re, Ni, ...
+    float base_rate = 1.0f;         // scale_rate * first_string_rate
 
     // per-string offsets
     float string_rate[kNumStrings] = {1.0f, 1.5f, 1.0f, 1.0f};
@@ -75,4 +86,6 @@ private:
     float stereo_width = 0.6f;
 
     float detune_phase[4] = {0, 0, 0, 0};
+
+    float octave_rate = 1.0f;
 };

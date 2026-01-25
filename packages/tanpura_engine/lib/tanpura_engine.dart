@@ -71,4 +71,14 @@ class TanpuraEngine {
   static Future<void> setVolume(double volume) {
     return TanpuraEnginePlatform.instance.setVolume(volume);
   }
+
+  /// Sets the scale (C, C#, D, ...).
+  static Future<void> setScale(int scale) {
+    return TanpuraEnginePlatform.instance.setScale(scale);
+  }
+
+  /// Sets the octave shift (-1, 0, +1).
+  static Future<void> setOctave(int octave) {
+    return TanpuraEnginePlatform.instance.setOctave(octave);
+  }
 }

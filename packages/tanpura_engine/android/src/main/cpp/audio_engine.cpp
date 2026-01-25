@@ -2,44 +2,52 @@
 #include <android/log.h>
 #include <cmath>
 #include <cstring>
-#include <cstdlib>
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "TanpuraEngine", __VA_ARGS__)
 
 // ------------------------------------------------------------
-// First string ratios (relative to Sa)
+// Scale ratios (absolute pitch: C → B)
 // ------------------------------------------------------------
-static constexpr float kFirstStringRatios[] = {
-    1.0000f,  // Sa
-    1.05946f, // Re komal
-    1.12246f, // Re shuddh
-    1.18921f, // Ga komal
-    1.25992f, // Ga shuddh
-    1.33484f, // Ma shuddh
-    1.41421f, // Ma tivra
-    1.49830f, // Pa
-    1.58740f, // Dha komal
-    1.68179f, // Dha shuddh
-    1.78180f, // Ni komal
-    1.88775f  // Ni shuddh
+static constexpr float kScaleRatios[12] = {
+    1.0000f,  // C
+    1.05946f, // C#
+    1.12246f, // D
+    1.18921f, // D#
+    1.25992f, // E
+    1.33484f, // F
+    1.41421f, // F#
+    1.49830f, // G
+    1.58740f, // G#
+    1.68179f, // A
+    1.78180f, // A#
+    1.88775f  // B
 };
 
-static constexpr int kNumFirstStrings =
-    sizeof(kFirstStringRatios) / sizeof(float);
+// ------------------------------------------------------------
+// First string swara ratios (relative to Sa)
+// ------------------------------------------------------------
+static constexpr float kFirstStringRatios[12] = {
+    1.0000f,  // Sa
+    1.05946f, // Re♭
+    1.12246f, // Re
+    1.18921f, // Ga♭
+    1.25992f, // Ga
+    1.33484f, // Ma
+    1.41421f, // Ma#
+    1.49830f, // Pa
+    1.58740f, // Dha♭
+    1.68179f, // Dha
+    1.78180f, // Ni♭
+    1.88775f  // Ni
+};
 
 // ------------------------------------------------------------
 // Engine lifecycle
 // ------------------------------------------------------------
 bool AudioEngine::initialize()
 {
-
     if (engineRunning)
-    {
-        LOGI("AudioEngine already initialized");
         return true;
-    }
-
-    LOGI("AudioEngine initialized");
 
     oboe::AudioStreamBuilder builder;
     builder.setDirection(oboe::Direction::Output)
@@ -48,28 +56,27 @@ bool AudioEngine::initialize()
         ->setChannelCount(oboe::ChannelCount::Stereo)
         ->setFormat(oboe::AudioFormat::Float)
         ->setCallback(this);
+
     if (builder.openStream(stream) != oboe::Result::OK)
     {
         LOGI("Failed to open audio stream");
         return false;
     }
 
-    sampleRate = static_cast<float>(stream->getSampleRate());
+    sampleRate = stream->getSampleRate();
     stream->requestStart();
 
     engineRunning = true;
     playing = false;
 
+    LOGI("AudioEngine initialized (%d Hz)", sampleRate);
     return true;
 }
 
 void AudioEngine::release()
 {
-
     if (!engineRunning)
         return;
-
-    LOGI("AudioEngine released");
 
     playing = false;
 
@@ -101,9 +108,6 @@ void AudioEngine::play()
 
 void AudioEngine::pause()
 {
-    if (!engineRunning)
-        return;
-    LOGI("paused");
     playing = false;
 }
 
@@ -112,12 +116,13 @@ bool AudioEngine::isPlaying() const
     return playing;
 }
 
+// ------------------------------------------------------------
+// Load WAV into all strings
+// ------------------------------------------------------------
 void AudioEngine::load_tanpura_sample(const std::vector<float> &samples)
 {
     for (int i = 0; i < kNumStrings; i++)
-    {
         strings[i].load(samples);
-    }
 }
 
 // ------------------------------------------------------------
@@ -142,32 +147,51 @@ void AudioEngine::setVolume(float volume)
     masterVolume.store(volume);
 }
 
-/// @brief Set the first string (Sa) tuning from predefined ratios
-/// @param firstStringIndex
-void AudioEngine::setFirstString(int firstStringIndex)
+// Absolute pitch (C, C#, D, ...)
+void AudioEngine::setScale(int scaleIndex)
 {
-    if (firstStringIndex < 0)
-        firstStringIndex = 0;
-    if (firstStringIndex >= kNumFirstStrings)
-        firstStringIndex = kNumFirstStrings - 1;
+    if (scaleIndex < 0)
+        scaleIndex = 0;
+    if (scaleIndex > 11)
+        scaleIndex = 11;
 
-    base_rate = kFirstStringRatios[firstStringIndex];
+    scale_rate = kScaleRatios[scaleIndex];
+    base_rate = scale_rate * first_string_rate;
+}
+
+// Swara role (Sa, Re♭, Re, ..., Ni)
+void AudioEngine::setFirstString(int swaraIndex)
+{
+    if (swaraIndex < 0)
+        swaraIndex = 0;
+    if (swaraIndex > 11)
+        swaraIndex = 11;
+
+    first_string_rate = kFirstStringRatios[swaraIndex];
+    base_rate = scale_rate * first_string_rate;
+}
+
+void AudioEngine::setOctave(int octave)
+{
+    // octave: -1 = male, 0 = normal, +1 = female
+    octave = std::max(-1, std::min(1, octave));
+    octave_rate = powf(2.0f, octave);
+    base_rate = scale_rate * first_string_rate * octave_rate;
 }
 
 // ------------------------------------------------------------
-// Audio callback (REALISTIC TANPURA)
+// Audio callback
 // ------------------------------------------------------------
 oboe::DataCallbackResult AudioEngine::onAudioReady(
     oboe::AudioStream *,
     void *audioData,
     int32_t numFrames)
 {
-    auto *output = static_cast<float *>(audioData);
+    float *output = static_cast<float *>(audioData);
 
-    // Silence if engine not running or playback paused (STEREO)
     if (!engineRunning || !playing)
     {
-        memset(audioData, 0, sizeof(float) * numFrames * 2);
+        memset(output, 0, sizeof(float) * numFrames * 2);
         return oboe::DataCallbackResult::Continue;
     }
 
@@ -175,9 +199,7 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
     {
         float mix = 0.0f;
 
-        // ------------------------------------------------
-        // 4-string tanpura layering (Sa–Pa–Sa–Sa)
-        // ------------------------------------------------
+        // ---- Sa–Pa–Sa–Sa layering ----
         for (int s = 0; s < kNumStrings; s++)
         {
             float rate =
@@ -185,33 +207,23 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
                 string_rate[s] *
                 (1.0f + string_detune[s]);
 
-            float v = strings[s].process(rate);
-            mix += v * string_gain[s];
+            mix += strings[s].process(rate) * string_gain[s];
         }
 
-        // ------------------------------------------------
-        // Jawari-style saturation
-        // ------------------------------------------------
+        // Jawari presence
         mix = tanhf(mix * 2.2f);
 
-        // ------------------------------------------------
-        // Slow amplitude breathing
-        // ------------------------------------------------
+        // Gentle breathing
         breath_phase += 0.00015f;
         if (breath_phase > 2.0f * M_PI)
             breath_phase -= 2.0f * M_PI;
 
-        float breath = 0.97f + 0.03f * sinf(breath_phase);
-        mix *= breath;
+        mix *= (0.97f + 0.03f * sinf(breath_phase));
 
-        // ------------------------------------------------
         // Final gain
-        // ------------------------------------------------
         mix *= 1.25f * masterVolume.load();
 
-        // ------------------------------------------------
-        // Stereo image (string-based width)
-        // ------------------------------------------------
+        // Stereo width
         float left = 0.0f;
         float right = 0.0f;
 
