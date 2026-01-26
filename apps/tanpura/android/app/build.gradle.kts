@@ -9,6 +9,27 @@ android {
     namespace = "com.tanpurax.tanpura"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    flavorDimensions += "env"
+
+    productFlavors {
+    create("dev") {
+        dimension = "env"
+        applicationIdSuffix = ".dev"
+        versionNameSuffix = "-dev"
+        resValue("string", "app_name", "Tanpura Dev")
+    }
+    create("staging") {
+        dimension = "env"
+        applicationIdSuffix = ".stg"
+        versionNameSuffix = "-stg"
+        resValue("string", "app_name", "Tanpura Staging")
+    }
+    create("prod") {
+        dimension = "env"
+        // no suffix for production
+        resValue("string", "app_name", "Tanpura")
+    }
+}
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

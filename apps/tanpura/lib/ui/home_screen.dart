@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tanpura/utils/env.dart';
 import 'package:tanpura/widgets/first_string_dropdown.dart';
 import 'package:tanpura/widgets/play_button.dart';
 import 'package:tanpura/widgets/tempo_selector.dart';
@@ -15,7 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tanpura')),
+      appBar: AppBar(title: Text(_getTitle())),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
@@ -29,5 +30,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  String _getTitle() {
+    switch (EnvConfig.current) {
+      case Env.dev:
+        return 'Tanpura DEV';
+      case Env.staging:
+        return 'Tanpura STAGING';
+      case Env.prod:
+        return 'Tanpura';
+    }
   }
 }

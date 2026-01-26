@@ -208,23 +208,6 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
         timingDriftCounter = 0;
     }
 
-    // // --------------------------------------------------------
-    // // Musical clock (energy refresh)
-    // // --------------------------------------------------------
-    // framesSincePluck += numFrames;
-    // int framesPerRefresh = static_cast<int>(pluckIntervalSec * sampleRate);
-
-    // if (framesSincePluck >= framesPerRefresh)
-    // {
-
-    //     stringEnvelope[activeString] += 0.2f;
-    //     if (stringEnvelope[activeString] > 1.0f)
-    //         stringEnvelope[activeString] = 1.0f;
-
-    //     activeString = (activeString + 1) % kNumStrings;
-    //     framesSincePluck = 0;
-    // }
-
     const float twoPi = 2.0f * M_PI;
     // --------------------------------------------------------
     // DSP loop

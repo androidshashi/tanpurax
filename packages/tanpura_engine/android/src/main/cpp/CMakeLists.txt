@@ -13,7 +13,7 @@ add_subdirectory(oboe)
 add_library(
         tanpura_engine
         SHARED
-        tanpura_engine.cpp
+        tanpura_jni.cpp
         audio_engine.cpp
 )
 
