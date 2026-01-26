@@ -94,6 +94,12 @@ class MockTanpuraEnginePlatform
     _scale = scale;
     return Future.value();
   }
+
+  @override
+  Future<void> setOctave(int octave) {
+    // TODO: implement setOctave
+    throw UnimplementedError();
+  }
 }
 
 void main() {
