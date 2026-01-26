@@ -1,3 +1,6 @@
 [submodule "packages/tanpura_engine/android/src/main/cpp/oboe"]
 	path = packages/tanpura_engine/android/src/main/cpp/oboe
 	url = https://github.com/google/oboe.git
+[submodule "apps/tanpuray/android/app/src/main/oboe"]
+	path = apps/tanpuray/android/app/src/main/oboe
+	url = https://github.com/google/oboe.git
