@@ -29,22 +29,25 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // Enable CMake for native code
+         // CMake configuration for C++ code
         externalNativeBuild {
             cmake {
-                cppFlags.addAll(listOf("-O3", "-ffast-math"))
-                arguments.addAll(listOf("-DANDROID_STL=c++_shared"))
+                cppFlags += listOf("-O3", "-ffast-math", "-std=c++17")
+                arguments += listOf("-DANDROID_STL=c++_shared")
             }
         }
         
+        // Specify which ABIs to build for
         ndk {
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
     }
 
-     externalNativeBuild {
+    // CRITICAL: CMake configuration - must be outside defaultConfig
+    externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 

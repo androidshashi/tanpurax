@@ -1,18 +1,16 @@
 // android/app/src/main/cpp/tanpura_jni.cpp
 #include <jni.h>
-#include "tanpura_engine.h"
+#include "TanpuraEngine.h"
 
 static TanpuraEngine *engine = nullptr;
 
 extern "C"
 {
 
-    JNIEXPORT void JNICALL
+    JNIEXPORT jboolean JNICALL
     Java_com_tanpuray_tanpura_tanpuray_TanpuraNative_initialize(
         JNIEnv *env,
-        jobject /* this */,
-        jint sampleRate,
-        jint bufferSize)
+        jobject /* this */)
     {
 
         if (engine != nullptr)
@@ -20,7 +18,33 @@ extern "C"
             delete engine;
         }
 
-        engine = new TanpuraEngine(sampleRate, bufferSize);
+        engine = new TanpuraEngine();
+        return JNI_TRUE;
+    }
+
+    JNIEXPORT jboolean JNICALL
+    Java_com_tanpuray_tanpura_tanpuray_TanpuraNative_start(
+        JNIEnv *env,
+        jobject /* this */)
+    {
+
+        if (engine != nullptr)
+        {
+            return engine->start() ? JNI_TRUE : JNI_FALSE;
+        }
+        return JNI_FALSE;
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_tanpuray_tanpura_tanpuray_TanpuraNative_stop(
+        JNIEnv *env,
+        jobject /* this */)
+    {
+
+        if (engine != nullptr)
+        {
+            engine->stop();
+        }
     }
 
     JNIEXPORT void JNICALL
@@ -50,21 +74,16 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_com_tanpuray_tanpura_tanpuray_TanpuraNative_generateAudio(
+    Java_com_tanpuray_tanpura_tanpuray_TanpuraNative_setTempo(
         JNIEnv *env,
         jobject /* this */,
-        jfloatArray outputArray)
+        jdouble tempo)
     {
 
-        if (engine == nullptr)
-            return;
-
-        jsize len = env->GetArrayLength(outputArray);
-        jfloat *output = env->GetFloatArrayElements(outputArray, nullptr);
-
-        engine->generateAudio(output, len);
-
-        env->ReleaseFloatArrayElements(outputArray, output, 0);
+        if (engine != nullptr)
+        {
+            engine->setTempo(tempo);
+        }
     }
 
     JNIEXPORT void JNICALL
