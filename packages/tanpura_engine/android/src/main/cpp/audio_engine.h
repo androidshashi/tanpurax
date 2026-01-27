@@ -47,7 +47,7 @@ private:
     float sampleRate = 48000.0f;
 
     // ===== TEMPO =====
-    float pluckIntervalSec = 0.5f; // slow energy refresh
+    std::atomic<float> pluckIntervalSec{0.5f}; // interval between string plucks
 
     // ===== TANPURA STRINGS (Sa–Pa–Sa–Sa) =====
     static constexpr int kNumStrings = 4;
@@ -60,11 +60,11 @@ private:
     };
 
     float stringPhase[kNumStrings] = {0};
-    float stringEnvelope[kNumStrings] = {0.4f, 0.4f, 0.4f, 0.4f};
+    float stringEnvelope[kNumStrings] = {0.6f, 0.6f, 0.6f, 0.6f};
 
     // ===== DRONE ENVELOPE =====
-    float decayRate = 0.9997f;
-    float sustainLevel = 0.35f;
+    float decayRate = 0.9998f;    // Slower decay for fuller sustain
+    float sustainLevel = 0.5f;    // Higher sustain for louder drone
 
     // ===== MUSICAL STATE =====
     int framesSincePluck = 0;

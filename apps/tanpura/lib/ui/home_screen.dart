@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tanpura/utils/env.dart';
 import 'package:tanpura/widgets/first_string_dropdown.dart';
 import 'package:tanpura/widgets/play_button.dart';
-import 'package:tanpura/widgets/tempo_selector.dart';
+import 'package:tanpura/widgets/tempo_slider.dart';
 import 'package:tanpura/widgets/volume_slider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
           spacing: 40,
           children: [
             PlayButton(),
-            TempoSelector(),
+            TempoSlider(),
             VolumeSlider(),
             FirstStringDropdown(),
           ],

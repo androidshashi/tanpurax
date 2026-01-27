@@ -123,7 +123,7 @@ void AudioEngine::setTempo(float intervalSec)
 {
     if (intervalSec > 0.0f)
     {
-        pluckIntervalSec = intervalSec;
+        pluckIntervalSec.store(intervalSec);
     }
 }
 
@@ -166,6 +166,33 @@ void AudioEngine::setFirstString(int firstStringIndex)
 }
 
 // ------------------------------------------------------------
+// Soft clipper for clean saturation at high volumes
+// ------------------------------------------------------------
+static inline float softClip(float x)
+{
+    // Attempt maximum clean output with tanh saturation
+    // Allows 1.5x overdrive before clipping starts
+    if (x > 1.5f)
+        return 1.0f;
+    if (x < -1.5f)
+        return -1.0f;
+    return tanhf(x * 0.8f) * 1.15f;
+}
+
+// ------------------------------------------------------------
+// Jivari simulation (bridge buzzing characteristic of tanpura)
+// ------------------------------------------------------------
+static inline float jivari(float sample, float phase, float intensity)
+{
+    // Simulate the characteristic "buzzing" from the curved bridge
+    // Creates subtle harmonic distortion when string amplitude is high
+    float buzz = sample * (1.0f + intensity * fabsf(sinf(phase * 3.0f)));
+    // Add subtle waveshaping for that metallic quality
+    float shaped = sample + intensity * 0.3f * sample * sample * (sample > 0 ? 1.0f : -1.0f);
+    return buzz * 0.7f + shaped * 0.3f;
+}
+
+// ------------------------------------------------------------
 // Audio callback (REALISTIC TANPURA)
 // ------------------------------------------------------------
 oboe::DataCallbackResult AudioEngine::onAudioReady(
@@ -183,6 +210,25 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
     }
 
     // --------------------------------------------------------
+    // Tempo-based sequential string plucking
+    // --------------------------------------------------------
+    const float intervalSec = pluckIntervalSec.load();
+    const int pluckIntervalFrames = static_cast<int>(intervalSec * sampleRate);
+
+    framesSincePluck += numFrames;
+    if (framesSincePluck >= pluckIntervalFrames)
+    {
+        // Pluck the next string in sequence (Sa → Sa → Pa → Sa)
+        stringEnvelope[activeString] = 1.0f; // Full attack on pluck
+
+        // Add slight random variation to pluck timing for natural feel
+        framesSincePluck = static_cast<int>(randomFloat(-0.02f, 0.02f) * sampleRate);
+
+        // Move to next string
+        activeString = (activeString + 1) % kNumStrings;
+    }
+
+    // --------------------------------------------------------
     // Slow micro-detune (~1–2 sec)
     // --------------------------------------------------------
     detuneCounter += numFrames;
@@ -190,7 +236,7 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
     {
         for (int s = 0; s < kNumStrings; s++)
         {
-            detuneOffset[s] = randomFloat(-0.0025f, 0.0025f);
+            detuneOffset[s] = randomFloat(-0.003f, 0.003f);
         }
         detuneCounter = 0;
     }
@@ -203,50 +249,54 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
     {
         for (int s = 0; s < kNumStrings; s++)
         {
-            stringTimeOffset[s] = randomFloat(-3.0f, 3.0f); // samples
+            stringTimeOffset[s] = randomFloat(-3.0f, 3.0f);
         }
         timingDriftCounter = 0;
     }
 
     const float twoPi = 2.0f * M_PI;
+    const float gain = masterVolume.load();
+
     // --------------------------------------------------------
     // DSP loop
     // --------------------------------------------------------
     for (int i = 0; i < numFrames; i++)
     {
-
         float left = 0.0f;
         float right = 0.0f;
 
         for (int s = 0; s < kNumStrings; s++)
         {
-
-            // Envelope decay (never dies)
+            // -------- Envelope decay with sustain floor --------
             stringEnvelope[s] *= decayRate;
             if (stringEnvelope[s] < sustainLevel)
                 stringEnvelope[s] = sustainLevel;
 
-            // ---------- CONTINUOUS APERIODIC ENERGY ----------
-            float energy = randomFloat(0.00005f, 0.00015f);
-            stringEnvelope[s] += energy;
-
-            if (stringEnvelope[s] > 1.0f)
-                stringEnvelope[s] = 1.0f;
-
             // Phase increment (with micro-detune)
-            float phaseInc =
-                twoPi *
-                (stringFreq[s] * (1.0f + detuneOffset[s])) /
-                sampleRate;
+            float freq = stringFreq[s] * (1.0f + detuneOffset[s]);
+            float phaseInc = twoPi * freq / sampleRate;
 
+            // -------- Rich harmonic content (7 harmonics) --------
+            // Tanpura has strong odd harmonics due to plucked string
+            float phase = stringPhase[s];
             float sample =
-                sinf(stringPhase[s]) * 0.6f +
-                sinf(2.0f * stringPhase[s]) * 0.25f +
-                sinf(3.0f * stringPhase[s]) * 0.15f;
+                sinf(phase) * 0.45f +              // fundamental
+                sinf(2.0f * phase) * 0.22f +       // 2nd harmonic
+                sinf(3.0f * phase) * 0.15f +       // 3rd harmonic
+                sinf(4.0f * phase) * 0.08f +       // 4th harmonic
+                sinf(5.0f * phase) * 0.05f +       // 5th harmonic
+                sinf(6.0f * phase) * 0.03f +       // 6th harmonic
+                sinf(7.0f * phase) * 0.02f;        // 7th harmonic
 
+            // -------- Jivari effect (bridge buzzing) --------
+            // Intensity varies with envelope (stronger when louder)
+            float jivariIntensity = 0.15f + 0.1f * stringEnvelope[s];
+            sample = jivari(sample, phase, jivariIntensity);
+
+            // Apply envelope
             sample *= stringEnvelope[s];
 
-            // Stereo pan (constant-power)
+            // -------- Stereo pan (constant-power) --------
             float pan = stringPan[s];
             float lGain = sqrtf(0.5f * (1.0f - pan));
             float rGain = sqrtf(0.5f * (1.0f + pan));
@@ -255,17 +305,20 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
             right += sample * rGain;
 
             // Phase advance with micro timing offset
-            stringPhase[s] +=
-                phaseInc + (stringTimeOffset[s] * phaseInc * 0.001f);
-
+            stringPhase[s] += phaseInc + (stringTimeOffset[s] * phaseInc * 0.001f);
             if (stringPhase[s] > twoPi)
                 stringPhase[s] -= twoPi;
         }
 
-        // Normalize
-        float gain = masterVolume.load();
-        left *= 0.25f * gain;
-        right *= 0.25f * gain;
+        // -------- Final mix with higher output level --------
+        // Increased from 0.25 to 0.6 for louder output
+        float outputGain = 0.6f * gain;
+        left *= outputGain;
+        right *= outputGain;
+
+        // -------- Soft clip for clean limiting --------
+        left = softClip(left);
+        right = softClip(right);
 
         // Write interleaved stereo
         output[i * 2] = left;
