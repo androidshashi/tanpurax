@@ -97,6 +97,11 @@ abstract class TanpuraEnginePlatform extends PlatformInterface {
     throw UnimplementedError('setScale() has not been implemented.');
   }
 
+  /// Sets the octave shift for all frequencies.
+  Future<void> setOctave(Octave octave) {
+    throw UnimplementedError('setOctave() has not been implemented.');
+  }
+
   /// Exports audio to a WAV file.
   Future<bool> exportWav(String filePath, double durationSec) {
     throw UnimplementedError('exportWav() has not been implemented.');

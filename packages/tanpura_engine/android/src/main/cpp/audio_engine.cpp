@@ -154,18 +154,26 @@ void AudioEngine::updateStringFrequencies()
     float baseSaFreq = kScaleFrequencies[scaleIdx];
     float firstStringFreq = baseSaFreq * kFirstStringRatios[currentFirstString];
 
+    // Apply octave multiplier
+    // octave1 (0) = 0.25x, octave2 (1) = 0.5x, octave3 (2) = 1.0x, octave4 (3) = 2.0x, octave5 (4) = 4.0x
+    static const float kOctaveMultipliers[] = {0.25f, 0.5f, 1.0f, 2.0f, 4.0f};
+    int octaveIdx = currentOctave;
+    if (octaveIdx < 0) octaveIdx = 0;
+    if (octaveIdx >= 5) octaveIdx = 4;
+    float octaveMultiplier = kOctaveMultipliers[octaveIdx];
+
     // Standard 4-string tanpura layout:
     // String 0: First string (Pa or Ma) - provides melodic color
     // String 1: Sa (middle octave)
     // String 2: Sa (middle octave) - slight detune for beating
     // String 3: Sa (low octave) - bass drone
-    stringFreq[0] = firstStringFreq;
-    stringFreq[1] = baseSaFreq;
-    stringFreq[2] = baseSaFreq;
-    stringFreq[3] = baseSaFreq * 0.5f;  // Low octave kharaj
+    stringFreq[0] = firstStringFreq * octaveMultiplier;
+    stringFreq[1] = baseSaFreq * octaveMultiplier;
+    stringFreq[2] = baseSaFreq * octaveMultiplier;
+    stringFreq[3] = baseSaFreq * 0.5f * octaveMultiplier;  // Low octave kharaj
 
-    LOGI("String frequencies: First=%.1f, Sa=%.1f, Sa=%.1f, SaLow=%.1f",
-         stringFreq[0], stringFreq[1], stringFreq[2], stringFreq[3]);
+    LOGI("String frequencies (octave %d, %.2fx): First=%.1f, Sa=%.1f, Sa=%.1f, SaLow=%.1f",
+         octaveIdx + 1, octaveMultiplier, stringFreq[0], stringFreq[1], stringFreq[2], stringFreq[3]);
 
     for (int i = 0; i < kNumStrings; i++)
     {
@@ -196,6 +204,18 @@ void AudioEngine::setScale(int scaleIndex)
         scaleIndex = kNumScales - 1;
 
     currentScale.store(scaleIndex);
+    updateStringFrequencies();
+}
+
+void AudioEngine::setOctave(int octaveIndex)
+{
+    if (octaveIndex < 0)
+        octaveIndex = 0;
+    else if (octaveIndex >= 5)
+        octaveIndex = 4;
+
+    currentOctave = octaveIndex;
+    LOGI("Octave set to %d", octaveIndex);
     updateStringFrequencies();
 }
 

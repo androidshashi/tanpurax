@@ -85,6 +85,11 @@ class MethodChannelTanpuraEngine extends TanpuraEnginePlatform {
   }
 
   @override
+  Future<void> setOctave(Octave octave) async {
+    await _channel.invokeMethod('set_octave', {'value': octave.index});
+  }
+
+  @override
   Future<bool> exportWav(String filePath, double durationSec) async {
     final result = await _channel.invokeMethod<bool>('export_wav', {
       'file_path': filePath,

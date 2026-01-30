@@ -114,6 +114,15 @@ extern "C"
         engine.setScale(static_cast<int>(value));
     }
 
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetOctave(
+        JNIEnv *,
+        jobject,
+        jint value)
+    {
+        engine.setOctave(static_cast<int>(value));
+    }
+
     // ------------------------------------------------------------
     // Export
     // ------------------------------------------------------------

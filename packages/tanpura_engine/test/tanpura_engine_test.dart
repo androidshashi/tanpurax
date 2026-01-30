@@ -67,6 +67,12 @@ class MockTanpuraEnginePlatform
     // TODO: implement setScale
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> setOctave(Octave octave) {
+    // TODO: implement setOctave
+    throw UnimplementedError();
+  }
 }
 
 void main() {

@@ -21,6 +21,7 @@ public:
     void setFirstString(int firstStringIndex);
     void setScale(int scaleIndex);
     void setVolume(float volume);
+    void setOctave(int octaveIndex);
 
     // ---------------- Export ----------------
     bool exportToWav(const char* filePath, float durationSec);
@@ -49,6 +50,7 @@ private:
     // Scale / pitch
     std::atomic<int> currentScale{2};  // Default D
     int currentFirstString = 7;         // Default Pa
+    int currentOctave = 2;               // Default octave3 (index 2 = 1.0x)
     void updateStringFrequencies();
 
     // Harmonic mode (Sa-Pa vs Sa-Ma)

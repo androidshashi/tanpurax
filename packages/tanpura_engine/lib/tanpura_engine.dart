@@ -77,6 +77,11 @@ class TanpuraEngine {
     return TanpuraEnginePlatform.instance.setScale(scale);
   }
 
+  /// Sets the octave shift for all frequencies.
+  static Future<void> setOctave(Octave octave) {
+    return TanpuraEnginePlatform.instance.setOctave(octave);
+  }
+
   /// Exports audio to a WAV file.
   /// Returns true if successful.
   static Future<bool> exportWav(String filePath, {double durationSec = 5.0}) {

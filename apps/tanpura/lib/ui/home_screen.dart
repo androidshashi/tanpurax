@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tanpura/utils/env.dart';
 import 'package:tanpura/widgets/export_button.dart';
 import 'package:tanpura/widgets/first_string_dropdown.dart';
+import 'package:tanpura/widgets/octave_selector.dart';
 import 'package:tanpura/widgets/play_button.dart';
 import 'package:tanpura/widgets/scale_selector.dart';
 import 'package:tanpura/widgets/tempo_slider.dart';
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
               TempoSlider(),
               VolumeSlider(),
               ScaleSelector(),
+              OctaveSelector(),
               FirstStringDropdown(),
               const SizedBox(height: 10),
               ExportButton(),
