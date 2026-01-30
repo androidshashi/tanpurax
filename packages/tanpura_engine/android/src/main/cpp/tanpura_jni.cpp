@@ -131,4 +131,22 @@ extern "C"
         return result;
     }
 
+    JNIEXPORT void JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeSetOctave(
+        JNIEnv *,
+        jobject,
+        jint value)
+    {
+        // 0 = Low, 1 = Mid, 2 = High
+        engine.setOctave(static_cast<int>(value));
+    }
+
+    JNIEXPORT jint JNICALL
+    Java_com_tanpurax_tanpura_1engine_TanpuraEnginePlugin_nativeGetOctave(
+        JNIEnv *,
+        jobject)
+    {
+        return engine.getOctave();
+    }
+
 } // extern "C"

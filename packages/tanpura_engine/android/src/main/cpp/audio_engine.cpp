@@ -8,10 +8,10 @@
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "TanpuraEngine", __VA_ARGS__)
 
+// Scale frequencies for MIDDLE octave (C3-B3)
+// Other octaves are derived by multiplying/dividing by 2
 // ------------------------------------------------------------
-// Scale frequencies (base Sa frequency for each Western note)
-// ------------------------------------------------------------
-static constexpr float kScaleFrequencies[] = {
+static constexpr float kScaleFrequenciesMid[] = {
     130.81f, // C3
     138.59f, // C#3
     146.83f, // D3 (default)
@@ -26,7 +26,11 @@ static constexpr float kScaleFrequencies[] = {
     246.94f  // B3
 };
 
-static constexpr int kNumScales = sizeof(kScaleFrequencies) / sizeof(float);
+static constexpr int kNumScales = sizeof(kScaleFrequenciesMid) / sizeof(float);
+
+// Octave multipliers: Low=0.5, Mid=1.0, High=2.0
+static constexpr float kOctaveMultipliers[] = {0.5f, 1.0f, 2.0f};
+static constexpr int kNumOctaves = 3;
 
 // ------------------------------------------------------------
 // First string ratios (relative to Sa)
@@ -140,32 +144,44 @@ void AudioEngine::setTempo(float intervalSec)
 
 void AudioEngine::setVolume(float volume)
 {
-    if (volume < 0.0f) volume = 0.0f;
-    if (volume > 1.0f) volume = 1.0f;
+    if (volume < 0.0f)
+        volume = 0.0f;
+    if (volume > 1.0f)
+        volume = 1.0f;
     masterVolume.store(volume);
 }
 
 void AudioEngine::updateStringFrequencies()
 {
     int scaleIdx = currentScale.load();
-    if (scaleIdx < 0) scaleIdx = 0;
-    if (scaleIdx >= kNumScales) scaleIdx = kNumScales - 1;
+    if (scaleIdx < 0)
+        scaleIdx = 0;
+    if (scaleIdx >= kNumScales)
+        scaleIdx = kNumScales - 1;
 
-    float baseSaFreq = kScaleFrequencies[scaleIdx];
+    int octaveIdx = currentOctave.load();
+    if (octaveIdx < 0)
+        octaveIdx = 0;
+    if (octaveIdx >= kNumOctaves)
+        octaveIdx = kNumOctaves - 1;
+
+    // Get base frequency and apply octave multiplier
+    float octaveMultiplier = kOctaveMultipliers[octaveIdx];
+    float baseSaFreq = kScaleFrequenciesMid[scaleIdx] * octaveMultiplier;
     float firstStringFreq = baseSaFreq * kFirstStringRatios[currentFirstString];
 
     // Standard 4-string tanpura layout:
     // String 0: First string (Pa or Ma) - provides melodic color
-    // String 1: Sa (middle octave)
-    // String 2: Sa (middle octave) - slight detune for beating
-    // String 3: Sa (low octave) - bass drone
+    // String 1: Sa (selected octave)
+    // String 2: Sa (selected octave) - slight detune for beating
+    // String 3: Sa (one octave lower) - bass drone (kharaj)
     stringFreq[0] = firstStringFreq;
     stringFreq[1] = baseSaFreq;
     stringFreq[2] = baseSaFreq;
-    stringFreq[3] = baseSaFreq * 0.5f;  // Low octave kharaj
+    stringFreq[3] = baseSaFreq * 0.5f; // Kharaj is always one octave below
 
-    LOGI("String frequencies: First=%.1f, Sa=%.1f, Sa=%.1f, SaLow=%.1f",
-         stringFreq[0], stringFreq[1], stringFreq[2], stringFreq[3]);
+    LOGI("String frequencies (Octave %d): First=%.1f, Sa=%.1f, Sa=%.1f, SaLow=%.1f",
+         octaveIdx, stringFreq[0], stringFreq[1], stringFreq[2], stringFreq[3]);
 
     for (int i = 0; i < kNumStrings; i++)
     {
@@ -199,6 +215,24 @@ void AudioEngine::setScale(int scaleIndex)
     updateStringFrequencies();
 }
 
+void AudioEngine::setOctave(int octaveIndex)
+{
+    // 0 = Low (C2-B2), 1 = Mid (C3-B3), 2 = High (C4-B4)
+    if (octaveIndex < 0)
+        octaveIndex = 0;
+    else if (octaveIndex >= kNumOctaves)
+        octaveIndex = kNumOctaves - 1;
+
+    currentOctave.store(octaveIndex);
+    LOGI("Octave set to %d (%s)", octaveIndex,
+         octaveIndex == 0 ? "Low" : (octaveIndex == 1 ? "Mid" : "High"));
+    updateStringFrequencies();
+}
+
+int AudioEngine::getOctave() const
+{
+    return currentOctave.load();
+}
 // ------------------------------------------------------------
 // JIVARI BRIDGE SIMULATION
 // The jivari (curved bridge) is what gives tanpura its buzz
@@ -236,14 +270,14 @@ static inline float generateString(float phase, float envelope)
 {
     // Rich harmonic content based on authentic tanpura analysis
     float sample =
-        sinf(phase) * 0.32f +               // H1: 32%
-        sinf(2.0f * phase) * 1.0f +         // H2: 100% dominant
-        sinf(3.0f * phase) * 0.30f +        // H3: 30%
-        sinf(4.0f * phase) * 0.65f +        // H4: 65% strong!
-        sinf(5.0f * phase) * 0.21f +        // H5: 21%
-        sinf(6.0f * phase) * 0.29f +        // H6: 29%
-        sinf(7.0f * phase) * 0.10f +        // H7: 10%
-        sinf(8.0f * phase) * 0.12f;         // H8: 12%
+        sinf(phase) * 0.32f +        // H1: 32%
+        sinf(2.0f * phase) * 1.0f +  // H2: 100% dominant
+        sinf(3.0f * phase) * 0.30f + // H3: 30%
+        sinf(4.0f * phase) * 0.65f + // H4: 65% strong!
+        sinf(5.0f * phase) * 0.21f + // H5: 21%
+        sinf(6.0f * phase) * 0.29f + // H6: 29%
+        sinf(7.0f * phase) * 0.10f + // H7: 10%
+        sinf(8.0f * phase) * 0.12f;  // H8: 12%
 
     // Apply jivari bridge effect - this creates the buzz!
     sample = jivari(sample, envelope);
@@ -262,7 +296,7 @@ static inline float softLimit(float x)
 // ------------------------------------------------------------
 // WAV file export
 // ------------------------------------------------------------
-bool AudioEngine::exportToWav(const char* filePath, float durationSec)
+bool AudioEngine::exportToWav(const char *filePath, float durationSec)
 {
     LOGI("Exporting WAV to: %s, duration: %.1f sec", filePath, durationSec);
 
@@ -274,7 +308,7 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
     std::vector<float> buffer(totalSamples);
 
     float exportPhase[4] = {0, 0, 0, 0};
-    float exportEnvelope[4] = {0.6f, 0.6f, 0.6f, 0.6f};  // Start at sustain level
+    float exportEnvelope[4] = {0.6f, 0.6f, 0.6f, 0.6f}; // Start at sustain level
     bool exportRising[4] = {false, false, false, false};
     int exportFramesSincePluck = 0;
     int exportActiveString = 0;
@@ -285,10 +319,10 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
     const float gain = masterVolume.load();
 
     // TANPURA ENVELOPE - Very gentle, no sharp attack
-    const float attackRate = 0.0003f;    // VERY slow attack
-    const float decayRate = 0.999965f;   // Slow decay
-    const float sustainLevel = 0.55f;    // HIGH sustain
-    const float peakLevel = 0.85f;       // Subtle swell
+    const float attackRate = 0.0003f;  // VERY slow attack
+    const float decayRate = 0.999965f; // Slow decay
+    const float sustainLevel = 0.55f;  // HIGH sustain
+    const float peakLevel = 0.85f;     // Subtle swell
 
     for (int i = 0; i < totalFrames; i++)
     {
@@ -356,8 +390,10 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
     for (int i = 0; i < totalSamples; i++)
     {
         float sample = buffer[i];
-        if (sample > 1.0f) sample = 1.0f;
-        if (sample < -1.0f) sample = -1.0f;
+        if (sample > 1.0f)
+            sample = 1.0f;
+        if (sample < -1.0f)
+            sample = -1.0f;
         pcmBuffer[i] = static_cast<int16_t>(sample * 32767.0f);
     }
 
@@ -365,27 +401,27 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
     int fileSize = 36 + dataSize;
 
     file.write("RIFF", 4);
-    file.write(reinterpret_cast<char*>(&fileSize), 4);
+    file.write(reinterpret_cast<char *>(&fileSize), 4);
     file.write("WAVE", 4);
 
     file.write("fmt ", 4);
     int fmtSize = 16;
-    file.write(reinterpret_cast<char*>(&fmtSize), 4);
+    file.write(reinterpret_cast<char *>(&fmtSize), 4);
     int16_t audioFormat = 1;
-    file.write(reinterpret_cast<char*>(&audioFormat), 2);
+    file.write(reinterpret_cast<char *>(&audioFormat), 2);
     int16_t channels = numChannels;
-    file.write(reinterpret_cast<char*>(&channels), 2);
-    file.write(reinterpret_cast<const char*>(&exportSampleRate), 4);
+    file.write(reinterpret_cast<char *>(&channels), 2);
+    file.write(reinterpret_cast<const char *>(&exportSampleRate), 4);
     int byteRate = exportSampleRate * numChannels * 2;
-    file.write(reinterpret_cast<char*>(&byteRate), 4);
+    file.write(reinterpret_cast<char *>(&byteRate), 4);
     int16_t blockAlign = numChannels * 2;
-    file.write(reinterpret_cast<char*>(&blockAlign), 2);
+    file.write(reinterpret_cast<char *>(&blockAlign), 2);
     int16_t bitsPerSample = 16;
-    file.write(reinterpret_cast<char*>(&bitsPerSample), 2);
+    file.write(reinterpret_cast<char *>(&bitsPerSample), 2);
 
     file.write("data", 4);
-    file.write(reinterpret_cast<char*>(&dataSize), 4);
-    file.write(reinterpret_cast<char*>(pcmBuffer.data()), dataSize);
+    file.write(reinterpret_cast<char *>(&dataSize), 4);
+    file.write(reinterpret_cast<char *>(pcmBuffer.data()), dataSize);
 
     file.close();
     LOGI("WAV export complete: %d frames", totalFrames);
@@ -426,10 +462,10 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
     // TANPURA ENVELOPE - Very gentle, no sharp attack
     // Real tanpura has continuous drone with subtle swells
     // Attack is VERY slow - no click/pluck sound
-    const float attackRate = 0.0003f;    // VERY slow attack - 3000+ samples
-    const float decayRate = 0.999965f;   // Slow decay
-    const float sustainLevel = 0.55f;    // HIGH sustain - continuous drone
-    const float peakLevel = 0.85f;       // Don't go to full 1.0 - subtle swell
+    const float attackRate = 0.0003f;  // VERY slow attack - 3000+ samples
+    const float decayRate = 0.999965f; // Slow decay
+    const float sustainLevel = 0.55f;  // HIGH sustain - continuous drone
+    const float peakLevel = 0.85f;     // Don't go to full 1.0 - subtle swell
 
     for (int i = 0; i < numFrames; i++)
     {

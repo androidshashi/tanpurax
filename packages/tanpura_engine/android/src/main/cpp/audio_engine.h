@@ -21,9 +21,13 @@ public:
     void setFirstString(int firstStringIndex);
     void setScale(int scaleIndex);
     void setVolume(float volume);
+    void setOctave(int octaveIndex); // 0=Low (C2-B2), 1=Mid (C3-B3), 2=High (C4-B4)
+
+    // Getters for UI state
+    int getOctave() const;
 
     // ---------------- Export ----------------
-    bool exportToWav(const char* filePath, float durationSec);
+    bool exportToWav(const char *filePath, float durationSec);
 
     // ---------------- Audio callback ----------------
     oboe::DataCallbackResult
@@ -48,7 +52,8 @@ private:
 
     // Scale / pitch
     std::atomic<int> currentScale{2};  // Default D
-    int currentFirstString = 7;         // Default Pa
+    std::atomic<int> currentOctave{1}; // Default Mid octave (1) - 0=Low, 1=Mid, 2=High
+    int currentFirstString = 7;        // Default Pa
     void updateStringFrequencies();
 
     // Harmonic mode (Sa-Pa vs Sa-Ma)

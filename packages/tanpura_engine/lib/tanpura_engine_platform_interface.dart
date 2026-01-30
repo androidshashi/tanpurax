@@ -101,4 +101,14 @@ abstract class TanpuraEnginePlatform extends PlatformInterface {
   Future<bool> exportWav(String filePath, double durationSec) {
     throw UnimplementedError('exportWav() has not been implemented.');
   }
+
+  /// Sets the octave (pitch range).
+  Future<void> setOctave(Octave octave) {
+    throw UnimplementedError('setOctave() has not been implemented.');
+  }
+
+  /// Gets the current octave setting.
+  Future<Octave> getOctave() {
+    throw UnimplementedError('getOctave() has not been implemented.');
+  }
 }

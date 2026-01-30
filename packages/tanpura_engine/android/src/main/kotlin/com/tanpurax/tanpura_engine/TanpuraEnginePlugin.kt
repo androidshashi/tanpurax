@@ -33,7 +33,8 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     private external fun nativeSetVolume(volume: Float)
     private external fun nativeSetScale(value: Int)
     private external fun nativeExportWav(filePath: String, durationSec: Float): Boolean
-
+    private external fun nativeSetOctave(value: Int)
+    private external fun nativeGetOctave(): Int
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(
             binding.binaryMessenger,
@@ -127,6 +128,25 @@ class TanpuraEnginePlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
                         null
                     )
                 }
+            }
+
+            "set_octave" -> {
+                val value = call.argument<Int>("value")
+                if (value != null) {
+                    // 0 = Low, 1 = Mid, 2 = High
+                    nativeSetOctave(value)
+                    result.success(null)
+                } else {
+                    result.error(
+                        "INVALID_ARGUMENT",
+                        "Octave value is required",
+                        null
+                    )
+                }
+            }
+ 
+            "get_octave" -> {
+                result.success(nativeGetOctave())
             }
 
             "export_wav" -> {

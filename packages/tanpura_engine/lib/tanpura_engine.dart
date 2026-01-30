@@ -77,6 +77,19 @@ class TanpuraEngine {
     return TanpuraEnginePlatform.instance.setScale(scale);
   }
 
+  /// Sets the octave (pitch range).
+  /// - Octave.low: Lower octave (deeper bass)
+  /// - Octave.mid: Middle octave (default, standard tanpura range)
+  /// - Octave.high: Higher octave (brighter, higher pitch)
+  static Future<void> setOctave(Octave octave) {
+    return TanpuraEnginePlatform.instance.setOctave(octave);
+  }
+
+  /// Gets the current octave setting.
+  static Future<Octave> getOctave() {
+    return TanpuraEnginePlatform.instance.getOctave();
+  }
+
   /// Exports audio to a WAV file.
   /// Returns true if successful.
   static Future<bool> exportWav(String filePath, {double durationSec = 5.0}) {

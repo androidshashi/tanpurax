@@ -27,16 +27,28 @@ enum FirstString {
 /// Determines the base frequency of Sa.
 /// Each value represents a Western note that Sa is tuned to.
 enum Scale {
-  c,  // C3 = 130.81 Hz
-  cSharp, // C#3 = 138.59 Hz
-  d,  // D3 = 146.83 Hz (default)
-  dSharp, // D#3 = 155.56 Hz
-  e,  // E3 = 164.81 Hz
-  f,  // F3 = 174.61 Hz
-  fSharp, // F#3 = 185.00 Hz
-  g,  // G3 = 196.00 Hz
-  gSharp, // G#3 = 207.65 Hz
-  a,  // A3 = 220.00 Hz
-  aSharp, // A#3 = 233.08 Hz
-  b,  // B3 = 246.94 Hz
+  c, // C = 130.81 Hz (mid octave)
+  cSharp, // C# = 138.59 Hz
+  d, // D = 146.83 Hz (default)
+  dSharp, // D# = 155.56 Hz
+  e, // E = 164.81 Hz
+  f, // F = 174.61 Hz
+  fSharp, // F# = 185.00 Hz
+  g, // G = 196.00 Hz
+  gSharp, // G# = 207.65 Hz
+  a, // A = 220.00 Hz
+  aSharp, // A# = 233.08 Hz
+  b, // B = 246.94 Hz
+}
+
+/// Octave options for Tanpura.
+///
+/// Determines the octave range of the tanpura.
+/// - low: Lower octave (C2-B2 range) - deeper, more bass
+/// - mid: Middle octave (C3-B3 range) - standard tanpura range
+/// - high: Higher octave (C4-B4 range) - brighter, higher pitch
+enum Octave {
+  low, // 0 - Lower octave (frequencies / 2)
+  mid, // 1 - Middle octave (default)
+  high, // 2 - Higher octave (frequencies * 2)
 }
