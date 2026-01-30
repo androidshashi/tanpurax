@@ -9,14 +9,6 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "TanpuraEngine", __VA_ARGS__)
 
 // ------------------------------------------------------------
-// Utility
-// ------------------------------------------------------------
-static float randomFloat(float min, float max)
-{
-    return min + (float(rand()) / float(RAND_MAX)) * (max - min);
-}
-
-// ------------------------------------------------------------
 // Scale frequencies (base Sa frequency for each Western note)
 // ------------------------------------------------------------
 static constexpr float kScaleFrequencies[] = {
@@ -34,8 +26,7 @@ static constexpr float kScaleFrequencies[] = {
     246.94f  // B3
 };
 
-static constexpr int kNumScales =
-    sizeof(kScaleFrequencies) / sizeof(float);
+static constexpr int kNumScales = sizeof(kScaleFrequencies) / sizeof(float);
 
 // ------------------------------------------------------------
 // First string ratios (relative to Sa)
@@ -55,15 +46,13 @@ static constexpr float kFirstStringRatios[] = {
     1.88775f  // Ni shuddh
 };
 
-static constexpr int kNumFirstStrings =
-    sizeof(kFirstStringRatios) / sizeof(float);
+static constexpr int kNumFirstStrings = sizeof(kFirstStringRatios) / sizeof(float);
 
 // ------------------------------------------------------------
 // Engine lifecycle
 // ------------------------------------------------------------
 bool AudioEngine::initialize()
 {
-
     if (engineRunning)
     {
         LOGI("AudioEngine already initialized");
@@ -96,7 +85,6 @@ bool AudioEngine::initialize()
 
 void AudioEngine::release()
 {
-
     if (!engineRunning)
         return;
 
@@ -150,18 +138,13 @@ void AudioEngine::setTempo(float intervalSec)
     }
 }
 
-/// @brief Set the master volume
-/// @param volume
 void AudioEngine::setVolume(float volume)
 {
-    if (volume < 0.0f)
-        volume = 0.0f;
-    if (volume > 1.0f)
-        volume = 1.0f;
+    if (volume < 0.0f) volume = 0.0f;
+    if (volume > 1.0f) volume = 1.0f;
     masterVolume.store(volume);
 }
 
-/// @brief Recalculate string frequencies based on current scale and first string
 void AudioEngine::updateStringFrequencies()
 {
     int scaleIdx = currentScale.load();
@@ -169,13 +152,20 @@ void AudioEngine::updateStringFrequencies()
     if (scaleIdx >= kNumScales) scaleIdx = kNumScales - 1;
 
     float baseSaFreq = kScaleFrequencies[scaleIdx];
-    float baseFreq = baseSaFreq * kFirstStringRatios[currentFirstString];
+    float firstStringFreq = baseSaFreq * kFirstStringRatios[currentFirstString];
 
-    // Typical tanpura layout: Sa – Sa – Pa – Sa
-    stringFreq[0] = baseFreq;
-    stringFreq[1] = baseFreq;
-    stringFreq[2] = baseFreq * 1.5f; // Pa
-    stringFreq[3] = baseFreq;
+    // Standard 4-string tanpura layout:
+    // String 0: First string (Pa or Ma) - provides melodic color
+    // String 1: Sa (middle octave)
+    // String 2: Sa (middle octave) - slight detune for beating
+    // String 3: Sa (low octave) - bass drone
+    stringFreq[0] = firstStringFreq;
+    stringFreq[1] = baseSaFreq;
+    stringFreq[2] = baseSaFreq;
+    stringFreq[3] = baseSaFreq * 0.5f;  // Low octave kharaj
+
+    LOGI("String frequencies: First=%.1f, Sa=%.1f, Sa=%.1f, SaLow=%.1f",
+         stringFreq[0], stringFreq[1], stringFreq[2], stringFreq[3]);
 
     for (int i = 0; i < kNumStrings; i++)
     {
@@ -183,8 +173,6 @@ void AudioEngine::updateStringFrequencies()
     }
 }
 
-/// @brief Set the first string (Sa) tuning from predefined ratios
-/// @param firstStringIndex
 void AudioEngine::setFirstString(int firstStringIndex)
 {
     if (firstStringIndex < 0)
@@ -193,11 +181,13 @@ void AudioEngine::setFirstString(int firstStringIndex)
         firstStringIndex = kNumFirstStrings - 1;
 
     currentFirstString = firstStringIndex;
+    isSaPaMode = (firstStringIndex >= 7);
+
+    LOGI("First string set to %d, mode: %s", firstStringIndex, isSaPaMode ? "Sa-Pa" : "Sa-Ma");
+
     updateStringFrequencies();
 }
 
-/// @brief Set the scale/pitch (base frequency of Sa)
-/// @param scaleIndex
 void AudioEngine::setScale(int scaleIndex)
 {
     if (scaleIndex < 0)
@@ -210,7 +200,67 @@ void AudioEngine::setScale(int scaleIndex)
 }
 
 // ------------------------------------------------------------
-// WAV file export (for debugging/sharing audio)
+// JIVARI BRIDGE SIMULATION
+// The jivari (curved bridge) is what gives tanpura its buzz
+// String grazes the bridge creating harmonic-rich buzz
+// ------------------------------------------------------------
+static inline float jivari(float sample, float envelope)
+{
+    // Jivari creates asymmetric clipping - string buzzes against bridge
+    // More buzz when string has more energy (higher envelope)
+    float buzzAmount = 0.3f + 0.4f * envelope;
+
+    // Asymmetric soft clipping simulates string hitting bridge
+    float x = sample * (1.0f + buzzAmount);
+    if (x > 0.8f)
+    {
+        // Positive half - string lifts off bridge, cleaner
+        x = 0.8f + 0.2f * tanhf((x - 0.8f) * 3.0f);
+    }
+    else if (x < -0.5f)
+    {
+        // Negative half - string hits bridge, creates buzz
+        x = -0.5f - 0.3f * tanhf((-x - 0.5f) * 5.0f);
+        // Add some grit/buzz on the negative swing
+        x += 0.1f * sinf(x * 15.0f) * envelope;
+    }
+
+    return x;
+}
+
+// ------------------------------------------------------------
+// Generate tanpura string with rich harmonics
+// Based on SaMa_A analysis: H1=32%, H2=100%, H3=30%, H4=65%, etc.
+// ------------------------------------------------------------
+static inline float generateString(float phase, float envelope)
+{
+    // Rich harmonic content based on authentic tanpura analysis
+    float sample =
+        sinf(phase) * 0.32f +               // H1: 32%
+        sinf(2.0f * phase) * 1.0f +         // H2: 100% dominant
+        sinf(3.0f * phase) * 0.30f +        // H3: 30%
+        sinf(4.0f * phase) * 0.65f +        // H4: 65% strong!
+        sinf(5.0f * phase) * 0.21f +        // H5: 21%
+        sinf(6.0f * phase) * 0.29f +        // H6: 29%
+        sinf(7.0f * phase) * 0.10f +        // H7: 10%
+        sinf(8.0f * phase) * 0.12f;         // H8: 12%
+
+    // Apply jivari bridge effect - this creates the buzz!
+    sample = jivari(sample, envelope);
+
+    return sample;
+}
+
+// ------------------------------------------------------------
+// Soft output limiter
+// ------------------------------------------------------------
+static inline float softLimit(float x)
+{
+    return tanhf(x * 0.7f) * 1.3f;
+}
+
+// ------------------------------------------------------------
+// WAV file export
 // ------------------------------------------------------------
 bool AudioEngine::exportToWav(const char* filePath, float durationSec)
 {
@@ -221,26 +271,27 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
     const int totalFrames = static_cast<int>(durationSec * exportSampleRate);
     const int totalSamples = totalFrames * numChannels;
 
-    // Allocate buffer
     std::vector<float> buffer(totalSamples);
 
-    // Reset state for clean export
     float exportPhase[4] = {0, 0, 0, 0};
-    float exportEnvelope[4] = {0, 0, 0, 0};
+    float exportEnvelope[4] = {0.6f, 0.6f, 0.6f, 0.6f};  // Start at sustain level
     bool exportRising[4] = {false, false, false, false};
     int exportFramesSincePluck = 0;
     int exportActiveString = 0;
-    float exportDetune[4] = {0, 0, 0, 0};
 
     const float twoPi = 2.0f * M_PI;
     const float intervalSec = pluckIntervalSec.load();
     const int pluckIntervalFrames = static_cast<int>(intervalSec * exportSampleRate);
     const float gain = masterVolume.load();
 
-    // Generate audio
+    // TANPURA ENVELOPE - Very gentle, no sharp attack
+    const float attackRate = 0.0003f;    // VERY slow attack
+    const float decayRate = 0.999965f;   // Slow decay
+    const float sustainLevel = 0.55f;    // HIGH sustain
+    const float peakLevel = 0.85f;       // Subtle swell
+
     for (int i = 0; i < totalFrames; i++)
     {
-        // Plucking logic
         exportFramesSincePluck++;
         if (exportFramesSincePluck >= pluckIntervalFrames)
         {
@@ -249,102 +300,51 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
             exportActiveString = (exportActiveString + 1) % kNumStrings;
         }
 
-        // Micro detune every ~1.5 sec
-        if (i % (exportSampleRate * 3 / 2) == 0)
-        {
-            for (int s = 0; s < kNumStrings; s++)
-            {
-                exportDetune[s] = randomFloat(-0.002f, 0.002f);
-            }
-        }
-
         float left = 0.0f;
         float right = 0.0f;
 
         for (int s = 0; s < kNumStrings; s++)
         {
-            // Envelope - use same smooth parameters as real-time playback
-            const float exportAttackRate = 0.00008f;   // Matches header
-            const float exportDecayRate = 0.999985f;   // Matches header
-            const float exportSustainLevel = 0.65f;    // Matches header
-
+            // Gentle envelope - no sharp attack
             if (exportRising[s])
             {
-                exportEnvelope[s] += exportAttackRate;
-                if (exportEnvelope[s] >= 1.0f)
+                exportEnvelope[s] += attackRate;
+                if (exportEnvelope[s] >= peakLevel)
                 {
-                    exportEnvelope[s] = 1.0f;
+                    exportEnvelope[s] = peakLevel;
                     exportRising[s] = false;
                 }
             }
             else
             {
-                exportEnvelope[s] *= exportDecayRate;
-                if (exportEnvelope[s] < exportSustainLevel)
-                    exportEnvelope[s] = exportSustainLevel;
+                exportEnvelope[s] *= decayRate;
+                if (exportEnvelope[s] < sustainLevel)
+                    exportEnvelope[s] = sustainLevel;
             }
 
-            // Oscillator
-            float freq = stringFreq[s] * (1.0f + exportDetune[s]);
+            float freq = stringFreq[s] * (1.0f + stringDetune[s]);
             float phaseInc = twoPi * freq / exportSampleRate;
 
-            float phase = exportPhase[s];
-            float brightness = 0.5f + 0.5f * exportEnvelope[s];
+            float sample = generateString(exportPhase[s], exportEnvelope[s]);
+            sample *= exportEnvelope[s] * stringVolume[s];
 
-            // Rich 12-harmonic content for authentic tanpura sound
-            float sample =
-                sinf(phase) * 0.30f +
-                sinf(2.0f * phase) * 0.25f * brightness +
-                sinf(3.0f * phase) * 0.20f * brightness +
-                sinf(4.0f * phase) * 0.15f * brightness +
-                sinf(5.0f * phase) * 0.12f * brightness +
-                sinf(6.0f * phase) * 0.10f * brightness +
-                sinf(7.0f * phase) * 0.08f * brightness +
-                sinf(8.0f * phase) * 0.06f * brightness +
-                sinf(9.0f * phase) * 0.05f * brightness +
-                sinf(10.0f * phase) * 0.04f * brightness +
-                sinf(11.0f * phase) * 0.03f * brightness +
-                sinf(12.0f * phase) * 0.025f * brightness;
-
-            // Jivari
-            float jivariInt = 0.12f + 0.15f * exportEnvelope[s];
-            float buzz = sample * (1.0f + jivariInt * fabsf(sinf(phase * 3.0f)));
-            float shaped = sample + jivariInt * 0.3f * sample * sample * (sample > 0 ? 1.0f : -1.0f);
-            sample = buzz * 0.7f + shaped * 0.3f;
-
-            sample *= exportEnvelope[s];
-
-            // Pan
             float pan = stringPan[s];
-            float lGain = sqrtf(0.5f * (1.0f - pan));
-            float rGain = sqrtf(0.5f * (1.0f + pan));
-
-            left += sample * lGain;
-            right += sample * rGain;
+            left += sample * sqrtf(0.5f * (1.0f - pan));
+            right += sample * sqrtf(0.5f * (1.0f + pan));
 
             exportPhase[s] += phaseInc;
             if (exportPhase[s] > twoPi)
                 exportPhase[s] -= twoPi;
         }
 
-        // Output gain and soft clip
-        float outputGain = 0.6f * gain;
-        left *= outputGain;
-        right *= outputGain;
-
-        if (left > 1.5f) left = 1.0f;
-        else if (left < -1.5f) left = -1.0f;
-        else left = tanhf(left * 0.8f) * 1.15f;
-
-        if (right > 1.5f) right = 1.0f;
-        else if (right < -1.5f) right = -1.0f;
-        else right = tanhf(right * 0.8f) * 1.15f;
+        float outputGain = 0.4f * gain;
+        left = softLimit(left * outputGain);
+        right = softLimit(right * outputGain);
 
         buffer[i * 2] = left;
         buffer[i * 2 + 1] = right;
     }
 
-    // Write WAV file
     std::ofstream file(filePath, std::ios::binary);
     if (!file.is_open())
     {
@@ -352,7 +352,6 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
         return false;
     }
 
-    // Convert to 16-bit PCM
     std::vector<int16_t> pcmBuffer(totalSamples);
     for (int i = 0; i < totalSamples; i++)
     {
@@ -362,7 +361,6 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
         pcmBuffer[i] = static_cast<int16_t>(sample * 32767.0f);
     }
 
-    // WAV header
     int dataSize = totalSamples * sizeof(int16_t);
     int fileSize = 36 + dataSize;
 
@@ -370,11 +368,10 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
     file.write(reinterpret_cast<char*>(&fileSize), 4);
     file.write("WAVE", 4);
 
-    // fmt chunk
     file.write("fmt ", 4);
     int fmtSize = 16;
     file.write(reinterpret_cast<char*>(&fmtSize), 4);
-    int16_t audioFormat = 1; // PCM
+    int16_t audioFormat = 1;
     file.write(reinterpret_cast<char*>(&audioFormat), 2);
     int16_t channels = numChannels;
     file.write(reinterpret_cast<char*>(&channels), 2);
@@ -386,7 +383,6 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
     int16_t bitsPerSample = 16;
     file.write(reinterpret_cast<char*>(&bitsPerSample), 2);
 
-    // data chunk
     file.write("data", 4);
     file.write(reinterpret_cast<char*>(&dataSize), 4);
     file.write(reinterpret_cast<char*>(pcmBuffer.data()), dataSize);
@@ -397,34 +393,7 @@ bool AudioEngine::exportToWav(const char* filePath, float durationSec)
 }
 
 // ------------------------------------------------------------
-// Soft clipper for clean saturation at high volumes
-// ------------------------------------------------------------
-static inline float softClip(float x)
-{
-    // Attempt maximum clean output with tanh saturation
-    // Allows 1.5x overdrive before clipping starts
-    if (x > 1.5f)
-        return 1.0f;
-    if (x < -1.5f)
-        return -1.0f;
-    return tanhf(x * 0.8f) * 1.15f;
-}
-
-// ------------------------------------------------------------
-// Jivari simulation (bridge buzzing characteristic of tanpura)
-// ------------------------------------------------------------
-static inline float jivari(float sample, float phase, float intensity)
-{
-    // Simulate the characteristic "buzzing" from the curved bridge
-    // Creates subtle harmonic distortion when string amplitude is high
-    float buzz = sample * (1.0f + intensity * fabsf(sinf(phase * 3.0f)));
-    // Add subtle waveshaping for that metallic quality
-    float shaped = sample + intensity * 0.3f * sample * sample * (sample > 0 ? 1.0f : -1.0f);
-    return buzz * 0.7f + shaped * 0.3f;
-}
-
-// ------------------------------------------------------------
-// Audio callback (REALISTIC TANPURA)
+// Audio callback - AUTHENTIC TANPURA WITH JIVARI
 // ------------------------------------------------------------
 oboe::DataCallbackResult AudioEngine::onAudioReady(
     oboe::AudioStream *,
@@ -433,65 +402,35 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
 {
     auto *output = static_cast<float *>(audioData);
 
-    // Silence if engine not running or playback paused (STEREO)
     if (!engineRunning || !playing)
     {
         memset(audioData, 0, sizeof(float) * numFrames * 2);
         return oboe::DataCallbackResult::Continue;
     }
 
-    // --------------------------------------------------------
-    // Sequential string plucking (Sa → Sa → Pa → Sa cycle)
-    // --------------------------------------------------------
     const float intervalSec = pluckIntervalSec.load();
     const int pluckIntervalFrames = static_cast<int>(intervalSec * sampleRate);
 
     framesSincePluck += numFrames;
     if (framesSincePluck >= pluckIntervalFrames)
     {
-        // Trigger the next string with smooth attack
         stringRising[activeString] = true;
         stringAge[activeString] = 0;
-
-        // Small random timing variation for natural feel
-        framesSincePluck = static_cast<int>(randomFloat(-0.015f, 0.015f) * sampleRate);
-
-        // Move to next string in sequence
+        framesSincePluck = 0;
         activeString = (activeString + 1) % kNumStrings;
-    }
-
-    // --------------------------------------------------------
-    // Slow micro-detune (~1–2 sec)
-    // --------------------------------------------------------
-    detuneCounter += numFrames;
-    if (detuneCounter > sampleRate * 1.5f)
-    {
-        for (int s = 0; s < kNumStrings; s++)
-        {
-            detuneOffset[s] = randomFloat(-0.002f, 0.002f);
-        }
-        detuneCounter = 0;
-    }
-
-    // --------------------------------------------------------
-    // Slow micro timing drift (~2–3 sec)
-    // --------------------------------------------------------
-    timingDriftCounter += numFrames;
-    if (timingDriftCounter > sampleRate * 2.5f)
-    {
-        for (int s = 0; s < kNumStrings; s++)
-        {
-            stringTimeOffset[s] = randomFloat(-2.0f, 2.0f);
-        }
-        timingDriftCounter = 0;
     }
 
     const float twoPi = 2.0f * M_PI;
     const float gain = masterVolume.load();
 
-    // --------------------------------------------------------
-    // DSP loop
-    // --------------------------------------------------------
+    // TANPURA ENVELOPE - Very gentle, no sharp attack
+    // Real tanpura has continuous drone with subtle swells
+    // Attack is VERY slow - no click/pluck sound
+    const float attackRate = 0.0003f;    // VERY slow attack - 3000+ samples
+    const float decayRate = 0.999965f;   // Slow decay
+    const float sustainLevel = 0.55f;    // HIGH sustain - continuous drone
+    const float peakLevel = 0.85f;       // Don't go to full 1.0 - subtle swell
+
     for (int i = 0; i < numFrames; i++)
     {
         float left = 0.0f;
@@ -499,20 +438,20 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
 
         for (int s = 0; s < kNumStrings; s++)
         {
-            // -------- Smooth envelope with attack and decay --------
+            // Gentle envelope - NO sharp attack
             if (stringRising[s])
             {
-                // Smooth attack phase
+                // Very slow rise - creates gentle swell, not pluck
                 stringEnvelope[s] += attackRate;
-                if (stringEnvelope[s] >= 1.0f)
+                if (stringEnvelope[s] >= peakLevel)
                 {
-                    stringEnvelope[s] = 1.0f;
+                    stringEnvelope[s] = peakLevel;
                     stringRising[s] = false;
                 }
             }
             else
             {
-                // Slow decay with sustain floor
+                // Slow decay to high sustain floor
                 stringEnvelope[s] *= decayRate;
                 if (stringEnvelope[s] < sustainLevel)
                     stringEnvelope[s] = sustainLevel;
@@ -520,65 +459,29 @@ oboe::DataCallbackResult AudioEngine::onAudioReady(
 
             stringAge[s]++;
 
-            // Phase increment (with micro-detune)
-            float freq = stringFreq[s] * (1.0f + detuneOffset[s]);
+            // Frequency with slight detune for beating between strings
+            float freq = stringFreq[s] * (1.0f + stringDetune[s]);
             float phaseInc = twoPi * freq / sampleRate;
 
-            // -------- Rich harmonic content (12 harmonics for authentic jivari) --------
-            float phase = stringPhase[s];
+            // Generate string with jivari buzz
+            float sample = generateString(stringPhase[s], stringEnvelope[s]);
+            sample *= stringEnvelope[s] * stringVolume[s];
 
-            // Harmonic balance changes with envelope (brighter on attack)
-            float brightness = 0.5f + 0.5f * stringEnvelope[s];
-
-            // Real tanpura has very rich harmonics due to jivari (curved bridge)
-            // Harmonics decay slower than typical string instruments
-            float sample =
-                sinf(phase) * 0.30f +                        // Fundamental
-                sinf(2.0f * phase) * 0.25f * brightness +    // 2nd - strong
-                sinf(3.0f * phase) * 0.20f * brightness +    // 3rd - strong
-                sinf(4.0f * phase) * 0.15f * brightness +    // 4th
-                sinf(5.0f * phase) * 0.12f * brightness +    // 5th
-                sinf(6.0f * phase) * 0.10f * brightness +    // 6th
-                sinf(7.0f * phase) * 0.08f * brightness +    // 7th
-                sinf(8.0f * phase) * 0.06f * brightness +    // 8th
-                sinf(9.0f * phase) * 0.05f * brightness +    // 9th
-                sinf(10.0f * phase) * 0.04f * brightness +   // 10th
-                sinf(11.0f * phase) * 0.03f * brightness +   // 11th
-                sinf(12.0f * phase) * 0.025f * brightness;   // 12th
-
-            // -------- Jivari effect (bridge buzzing) --------
-            // Stronger jivari when string is louder (freshly plucked)
-            float jivariIntensity = 0.12f + 0.15f * stringEnvelope[s];
-            sample = jivari(sample, phase, jivariIntensity);
-
-            // Apply envelope
-            sample *= stringEnvelope[s];
-
-            // -------- Stereo pan (constant-power) --------
+            // Stereo pan
             float pan = stringPan[s];
-            float lGain = sqrtf(0.5f * (1.0f - pan));
-            float rGain = sqrtf(0.5f * (1.0f + pan));
+            left += sample * sqrtf(0.5f * (1.0f - pan));
+            right += sample * sqrtf(0.5f * (1.0f + pan));
 
-            left += sample * lGain;
-            right += sample * rGain;
-
-            // Phase advance with micro timing offset
-            stringPhase[s] += phaseInc + (stringTimeOffset[s] * phaseInc * 0.001f);
+            stringPhase[s] += phaseInc;
             if (stringPhase[s] > twoPi)
                 stringPhase[s] -= twoPi;
         }
 
-        // -------- Final mix with higher output level --------
-        // Increased from 0.25 to 0.6 for louder output
-        float outputGain = 0.6f * gain;
-        left *= outputGain;
-        right *= outputGain;
+        // Output with soft limiting
+        float outputGain = 0.4f * gain;
+        left = softLimit(left * outputGain);
+        right = softLimit(right * outputGain);
 
-        // -------- Soft clip for clean limiting --------
-        left = softClip(left);
-        right = softClip(right);
-
-        // Write interleaved stereo
         output[i * 2] = left;
         output[i * 2 + 1] = right;
     }

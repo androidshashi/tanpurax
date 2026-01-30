@@ -1,0 +1,152 @@
+======================================================================
+          TANPURA BATCH ANALYSIS SUMMARY REPORT
+======================================================================
+Generated: 2026-01-29 09:38:52
+Total Files Analyzed: 17
+
+======================================================================
+                    FILE SUMMARIES
+======================================================================
+
+1. SaMa_A.mp3
+   Scale: A (Sa = 220.0 Hz)
+   Score: 49/100
+   Volume Variation: 250.6%
+   Strong Harmonics: 8/20
+   Verdict: NEEDS WORK
+
+2. SaMa_C.mp3
+   Scale: F (Sa = 174.6 Hz)
+   Score: 50/100
+   Volume Variation: 254.1%
+   Strong Harmonics: 6/20
+   Verdict: NEEDS WORK
+
+3. SaMa_Csharp_Db.mp3
+   Scale: F# (Sa = 185.0 Hz)
+   Score: 50/100
+   Volume Variation: 248.8%
+   Strong Harmonics: 6/20
+   Verdict: NEEDS WORK
+
+4. SaMa_D.mp3
+   Scale: G (Sa = 196.0 Hz)
+   Score: 50/100
+   Volume Variation: 248.2%
+   Strong Harmonics: 6/20
+   Verdict: NEEDS WORK
+
+5. SaMa_G.mp3
+   Scale: G (Sa = 196.0 Hz)
+   Score: 49/100
+   Volume Variation: 255.8%
+   Strong Harmonics: 8/20
+   Verdict: NEEDS WORK
+
+6. SaPa_A.mp3
+   Scale: G (Sa = 196.0 Hz)
+   Score: 38/100
+   Volume Variation: 182.6%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+7. SaPa_Asharp_Bb.mp3
+   Scale: D (Sa = 146.8 Hz)
+   Score: 36/100
+   Volume Variation: 180.4%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+8. SaPa_B.mp3
+   Scale: A (Sa = 220.0 Hz)
+   Score: 38/100
+   Volume Variation: 179.3%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+9. SaPa_C.mp3
+   Scale: A# (Sa = 233.1 Hz)
+   Score: 38/100
+   Volume Variation: 184.1%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+10. SaPa_Csharp_Db.mp3
+   Scale: B (Sa = 246.9 Hz)
+   Score: 38/100
+   Volume Variation: 178.6%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+11. SaPa_D.mp3
+   Scale: F# (Sa = 185.0 Hz)
+   Score: 43/100
+   Volume Variation: 179.1%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+12. SaPa_Dsharp_Eb.mp3
+   Scale: G (Sa = 196.0 Hz)
+   Score: 43/100
+   Volume Variation: 178.9%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+13. SaPa_E.mp3
+   Scale: G# (Sa = 207.7 Hz)
+   Score: 43/100
+   Volume Variation: 179.0%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+14. SaPa_F.mp3
+   Scale: A (Sa = 220.0 Hz)
+   Score: 38/100
+   Volume Variation: 180.9%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+15. SaPa_Fsharp_Gb.mp3
+   Scale: C (Sa = 130.8 Hz)
+   Score: 36/100
+   Volume Variation: 181.8%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+16. SaPa_G.mp3
+   Scale: C# (Sa = 138.6 Hz)
+   Score: 36/100
+   Volume Variation: 184.7%
+   Strong Harmonics: 2/20
+   Verdict: NEEDS WORK
+
+17. SaPa_Gsharp_Ab.mp3
+   Scale: G# (Sa = 207.7 Hz)
+   Score: 49/100
+   Volume Variation: 255.8%
+   Strong Harmonics: 8/20
+   Verdict: NEEDS WORK
+
+======================================================================
+                    STATISTICS
+======================================================================
+
+Average Score: 42.6/100
+Highest Score: 50/100
+Lowest Score: 36/100
+
+Scale Distribution:
+  A: 3 file(s)
+  A#: 1 file(s)
+  B: 1 file(s)
+  C: 1 file(s)
+  C#: 1 file(s)
+  D: 1 file(s)
+  F: 1 file(s)
+  F#: 2 file(s)
+  G: 4 file(s)
+  G#: 2 file(s)
+
+======================================================================
+                    END OF SUMMARY
+======================================================================

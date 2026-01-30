@@ -7,23 +7,19 @@ class AudioEngine : public oboe::AudioStreamCallback
 {
 public:
     // ---------------- Engine lifecycle ----------------
-    bool initialize(); // start audio stream
-    void release();    // stop audio stream
+    bool initialize();
+    void release();
     bool isEngineRunning() const;
 
     // ---------------- Playback lifecycle ----------------
-    void play();  // enable sound
-    void pause(); // silence sound
+    void play();
+    void pause();
     bool isPlaying() const;
 
     // ---------------- Parameters ----------------
     void setTempo(float intervalSec);
-    // First string / tuning
     void setFirstString(int firstStringIndex);
-    // Scale / pitch (base frequency of Sa)
     void setScale(int scaleIndex);
-
-    // Master volume
     void setVolume(float volume);
 
     // ---------------- Export ----------------
@@ -41,59 +37,51 @@ private:
 
     // Engine state
     std::atomic<bool> engineRunning{false};
-
-    // Master output volume (0.0 – 1.0)
+    std::atomic<bool> playing{false};
     std::atomic<float> masterVolume{0.85f};
 
-    // Playback state
-    std::atomic<bool> playing{false};
-
-    // ===== CORE =====
+    // Core
     float sampleRate = 48000.0f;
 
-    // ===== TEMPO =====
-    std::atomic<float> pluckIntervalSec{0.5f}; // interval between string plucks
+    // Tempo - 0.8s interval = each string every 3.2 seconds
+    std::atomic<float> pluckIntervalSec{0.8f};
 
-    // ===== SCALE / PITCH =====
-    std::atomic<int> currentScale{2};  // Default D (index 2)
-    int currentFirstString = 0;         // Track current first string for recalc
-    void updateStringFrequencies();     // Recalculate frequencies
+    // Scale / pitch
+    std::atomic<int> currentScale{2};  // Default D
+    int currentFirstString = 7;         // Default Pa
+    void updateStringFrequencies();
 
-    // ===== TANPURA STRINGS (Sa–Pa–Sa–Sa) =====
+    // Harmonic mode (Sa-Pa vs Sa-Ma)
+    bool isSaPaMode = true;
+
+    // ===== TANPURA STRINGS =====
     static constexpr int kNumStrings = 4;
 
     float stringFreq[kNumStrings] = {
-        146.83f, // Sa (D3)
-        220.25f, // Pa
+        220.0f,  // First string (Pa/Ma)
         146.83f, // Sa
-        146.83f  // Sa
+        146.83f, // Sa
+        73.42f   // Sa low octave (kharaj)
     };
 
     float stringPhase[kNumStrings] = {0};
-    float stringEnvelope[kNumStrings] = {0.0f, 0.0f, 0.0f, 0.0f};
+    // Start with high envelope - tanpura is continuous drone
+    float stringEnvelope[kNumStrings] = {0.6f, 0.6f, 0.6f, 0.6f};
 
-    // ===== DRONE ENVELOPE =====
-    // Attack/decay rates per sample (very smooth transitions)
-    float attackRate = 0.00008f;   // Slower attack (~0.25s to peak) for smoother transitions
-    float decayRate = 0.999985f;   // Much slower decay - string sustains ~3-4 seconds
-    float sustainLevel = 0.65f;    // Higher floor level - reduces volume pumping dramatically
+    // Per-string STATIC permanent detune (creates natural beating)
+    // Slight detune between same-note strings creates the shimmer
+    float stringDetune[4] = {0.0f, 0.0015f, -0.0012f, 0.0008f};
 
-    // ===== PLUCKING STATE =====
+    // Plucking state
     int framesSincePluck = 0;
     int activeString = 0;
-
-    // Per-string pluck state (time since each string was plucked)
     int stringAge[kNumStrings] = {0, 0, 0, 0};
     bool stringRising[kNumStrings] = {false, false, false, false};
 
-    // Stereo spread
-    float stringPan[4] = {-0.6f, -0.2f, 0.2f, 0.6f}; // L → R
+    // Stereo spread - strings panned across stereo field
+    float stringPan[4] = {-0.4f, -0.1f, 0.1f, 0.4f};
 
-    // Micro timing offsets (samples)
-    float stringTimeOffset[4] = {0, 0, 0, 0};
-    int timingDriftCounter = 0;
-
-    // Micro detune
-    float detuneOffset[4] = {0, 0, 0, 0};
-    int detuneCounter = 0;
+    // Per-string volume
+    // First string (Pa/Ma) slightly softer, bass string also softer
+    float stringVolume[4] = {0.85f, 1.0f, 1.0f, 0.75f};
 };

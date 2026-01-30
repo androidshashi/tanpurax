@@ -12,19 +12,11 @@ class PlayButton extends StatefulWidget {
 class _PlayButtonState extends State<PlayButton> {
   bool isPlaying = false;
 
-  void _toggle() async {
+  void _toggle() {
     if (isPlaying) {
       TanpuraEngine.pause();
     } else {
       TanpuraEngine.play();
-
-      await TanpuraEngine.setFirstString(FirstString.sa);
-      await Future.delayed(Duration(seconds: 5));
-
-      // await TanpuraEngine.setFirstString(FirstString.pa);
-      // await Future.delayed(Duration(seconds: 5));
-
-      // await TanpuraEngine.setFirstString(FirstString.niKomal);
     }
     setState(() => isPlaying = !isPlaying);
   }

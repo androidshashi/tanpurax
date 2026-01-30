@@ -12,7 +12,15 @@ class ScaleSelector extends StatefulWidget {
 }
 
 class _ScaleSelectorState extends State<ScaleSelector> {
-  Scale _selectedScale = Scale.d; // Default to D
+  Scale _selectedScale =
+      Scale.aSharp; // Default to D (matches native engine default)
+
+  @override
+  void initState() {
+    super.initState();
+    // Sync engine with default selection on widget init
+    TanpuraEngine.setScale(_selectedScale);
+  }
 
   String _getDisplayText(Scale scale) {
     switch (scale) {
@@ -61,19 +69,20 @@ class _ScaleSelectorState extends State<ScaleSelector> {
             isExpanded: true,
             underline: const SizedBox(),
             dropdownColor: const Color(0xFF1A1A1A),
-            items: Scale.values.map((Scale scale) {
-              return DropdownMenuItem<Scale>(
-                value: scale,
-                child: Text(
-                  _getDisplayText(scale),
-                  style: const TextStyle(
-                    color: Color(0xFFC9A24D),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              );
-            }).toList(),
+            items:
+                Scale.values.map((Scale scale) {
+                  return DropdownMenuItem<Scale>(
+                    value: scale,
+                    child: Text(
+                      _getDisplayText(scale),
+                      style: const TextStyle(
+                        color: Color(0xFFC9A24D),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }).toList(),
             onChanged: (Scale? newValue) {
               if (newValue != null) {
                 setState(() {

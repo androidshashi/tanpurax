@@ -12,7 +12,15 @@ class FirstStringDropdown extends StatefulWidget {
 }
 
 class _FirstStringDropdownState extends State<FirstStringDropdown> {
-  late FirstString selectedString = FirstString.sa;
+  // Default to Pa (most common tanpura tuning) - matches native engine default
+  late FirstString selectedString = FirstString.maShuddh;
+
+  @override
+  void initState() {
+    super.initState();
+    // Sync engine with default selection on widget init
+    TanpuraEngine.setFirstString(selectedString);
+  }
 
   /// Convert enum name to display text (e.g., reKomal -> Re Komal)
   String _getDisplayText(FirstString value) {
