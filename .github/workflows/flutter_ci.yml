@@ -3,17 +3,19 @@ name: Flutter CI (Manual Trigger)
 on:
   workflow_dispatch:
     inputs:
-      flutter-version:
-        description: "Select flutter version"
-        required: true
-        default: "3.32.0"
-        type: string
-
-      branch:
-        description: "Enter branch name to build"
+      branch-name:
+        description: "Enter branch name"
         required: true
         default: main
         type: string
+
+      app-name:
+        description: "Enter app name"
+        required: true
+        default: tanpura
+        type: choice
+        options:
+          - tanpura
 
       flavor:
         description: "Select build flavor"
@@ -34,52 +36,67 @@ on:
           - debug
           - release
 
+      flutter-version:
+        description: "Select flutter version"
+        required: true
+        default: "3.32.0"
+        type: string
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout selected branch
+      # 0 Set build variables
+      - name: Set build variables
+        run: |
+          echo "FLAVOR=${{ github.event.inputs.flavor }}" >> $GITHUB_ENV
+          echo "MODE=${{ github.event.inputs.build-mode }}" >> $GITHUB_ENV
+          echo "TARGET=lib/main_${{ github.event.inputs.flavor }}.dart" >> $GITHUB_ENV
+
+      # 1️ Checkout selected branch
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ github.event.inputs.branch-name }}
 
-      # 2️⃣ Java setup
+      # 2️ Java setup
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # 3️⃣ Flutter setup
+      # 3️ Flutter setup
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ github.event.inputs.flutter-version }}
           cache: true
 
-      # 4️⃣ Dependencies
+      # 4️ Switch to the given app
+      - name: Switch to the given app
+        run: cd apps/${{ github.event.inputs.app-name }}
+
+      # 5 Dependencies
       - name: Flutter pub get
         run: flutter pub get
 
-      # 5️⃣ Set flavor variables
-      - name: Set build variables
-        run: |
-          echo "FLAVOR=${{ github.event.inputs.flavor }}" >> $GITHUB_ENV
-          echo "TARGET=lib/main_${{ github.event.inputs.flavor }}.dart" >> $GITHUB_ENV
-
-      # 6️⃣ Tests
+      # 7 Tests (skip in release if you want speed)
       - name: Run tests
         run: flutter test
 
-      # 7️⃣ Build APK
+      # 8 Build APK
       - name: Build APK
-        run: flutter build apk --${{ github.event.inputs.build-mode }} --flavor $FLAVOR -t $TARGET
+        run: |
+          flutter build apk \
+            --${MODE} \
+            --flavor ${FLAVOR} \
+            -t ${TARGET}
 
-      # 8️⃣ Upload APK
+      # 9 Upload APK
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-${{ github.event.inputs.flavor }}-${{ github.event.inputs.build-mode }}-apk
+          name: app-${{ github.event.inputs.flavor }}-${{ github.event.inputs.build-mode}}-apk
           path: build/app/outputs/flutter-apk/*.apk
