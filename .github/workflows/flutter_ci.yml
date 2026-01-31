@@ -1,0 +1,85 @@
+name: Flutter CI (Manual Trigger)
+
+on:
+  workflow_dispatch:
+    inputs:
+      flutter-version:
+        description: "Select flutter version"
+        required: true
+        default: "3.32.0"
+        type: string
+
+      branch:
+        description: "Enter branch name to build"
+        required: true
+        default: main
+        type: string
+
+      flavor:
+        description: "Select build flavor"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+      build-mode:
+        description: "Select build mode"
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout selected branch
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      # 2️⃣ Java setup
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # 3️⃣ Flutter setup
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ github.event.inputs.flutter-version }}
+          cache: true
+
+      # 4️⃣ Dependencies
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # 5️⃣ Set flavor variables
+      - name: Set build variables
+        run: |
+          echo "FLAVOR=${{ github.event.inputs.flavor }}" >> $GITHUB_ENV
+          echo "TARGET=lib/main_${{ github.event.inputs.flavor }}.dart" >> $GITHUB_ENV
+
+      # 6️⃣ Tests
+      - name: Run tests
+        run: flutter test
+
+      # 7️⃣ Build APK
+      - name: Build APK
+        run: flutter build apk --${{ github.event.inputs.build-mode }} --flavor $FLAVOR -t $TARGET
+
+      # 8️⃣ Upload APK
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ github.event.inputs.flavor }}-${{ github.event.inputs.build-mode }}-apk
+          path: build/app/outputs/flutter-apk/*.apk
