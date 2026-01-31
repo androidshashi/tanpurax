@@ -67,39 +67,39 @@ android {
     }
 }
 
-gradle.taskGraph.whenReady {
+// gradle.taskGraph.whenReady {
 
-    val taskNames = gradle.startParameter.taskNames.joinToString(" ")
+//     val taskNames = gradle.startParameter.taskNames.joinToString(" ")
 
-    val flavor = when {
-        taskNames.contains("Dev", ignoreCase = true) -> "dev"
-        taskNames.contains("Staging", ignoreCase = true) -> "staging"
-        taskNames.contains("Prod", ignoreCase = true) -> "prod"
-        else -> null
-    }
+//     val flavor = when {
+//         taskNames.contains("Dev", ignoreCase = true) -> "dev"
+//         taskNames.contains("Staging", ignoreCase = true) -> "staging"
+//         taskNames.contains("Prod", ignoreCase = true) -> "prod"
+//         else -> null
+//     }
 
-    flavor?.let{it->
-        val sourceFile = File(
-            projectDir,
-            "src/$it/google-services.json"
-        )
+//     flavor?.let{it->
+//         val sourceFile = File(
+//             projectDir,
+//             "src/$it/google-services.json"
+//         )
 
-        val destinationFile = File(
-            projectDir,
-            "google-services.json"
-        )
+//         val destinationFile = File(
+//             projectDir,
+//             "google-services.json"
+//         )
 
-        if (!sourceFile.exists()) {
-            throw GradleException(
-                "❌ Missing google-services.json for flavor: $it"
-            )
-        }
+//         if (!sourceFile.exists()) {
+//             throw GradleException(
+//                 "❌ Missing google-services.json for flavor: $it"
+//             )
+//         }
 
-        sourceFile.copyTo(destinationFile, overwrite = true)
-        println("✔ Firebase config applied for flavor: $it")
-    }
+//         sourceFile.copyTo(destinationFile, overwrite = true)
+//         println("✔ Firebase config applied for flavor: $it")
+//     }
 
-}
+// }
 
 
 flutter {
