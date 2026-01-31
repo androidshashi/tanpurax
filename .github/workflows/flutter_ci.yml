@@ -59,7 +59,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch-name }}
-          submodules: 'recursive'
+          submodules: "recursive"
 
       # 2️ Java setup
       - name: Set up Java
