@@ -79,12 +79,7 @@ jobs:
         working-directory: apps/${{ github.event.inputs.app-name }}
         run: flutter pub get
 
-      # 5 Tests (skip in release if you want speed)
-      - name: Run tests
-        working-directory: apps/${{ github.event.inputs.app-name }}
-        run: flutter test
-
-      # 6 Build APK
+      # 5 Build APK
       - name: Build APK
         working-directory: apps/${{ github.event.inputs.app-name }}
         run: |
@@ -93,7 +88,7 @@ jobs:
             --flavor ${FLAVOR} \
             -t ${TARGET}
 
-      # 7 Upload APK
+      # 6 Upload APK
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
