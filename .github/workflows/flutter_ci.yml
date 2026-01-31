@@ -74,29 +74,28 @@ jobs:
           flutter-version: ${{ github.event.inputs.flutter-version }}
           cache: true
 
-      # 4️ Switch to the given app
-      - name: Switch to the given app
-        run: cd apps/${{ github.event.inputs.app-name }}
-
-      # 5 Dependencies
+      # 4 Dependencies
       - name: Flutter pub get
+        working-directory: apps/${{ github.event.inputs.app-name }}
         run: flutter pub get
 
-      # 7 Tests (skip in release if you want speed)
+      # 5 Tests (skip in release if you want speed)
       - name: Run tests
+        working-directory: apps/${{ github.event.inputs.app-name }}
         run: flutter test
 
-      # 8 Build APK
+      # 6 Build APK
       - name: Build APK
+        working-directory: apps/${{ github.event.inputs.app-name }}
         run: |
           flutter build apk \
             --${MODE} \
             --flavor ${FLAVOR} \
             -t ${TARGET}
 
-      # 9 Upload APK
+      # 7 Upload APK
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-${{ github.event.inputs.flavor }}-${{ github.event.inputs.build-mode}}-apk
-          path: build/app/outputs/flutter-apk/*.apk
+          name: app-${{ github.event.inputs.flavor }}-${{ github.event.inputs.build-mode }}-apk
+          path: apps/${{ github.event.inputs.app-name }}/build/app/outputs/flutter-apk/*.apk
