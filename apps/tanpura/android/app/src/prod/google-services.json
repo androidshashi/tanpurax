@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "319429184438",
+    "project_id": "tanpurax",
+    "storage_bucket": "tanpurax.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:319429184438:android:5d7582662468fa09afcf17",
+        "android_client_info": {
+          "package_name": "com.tanpurax.tanpura"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFqrurkxYb_xZoHehh54znMLtWBRDyqbE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

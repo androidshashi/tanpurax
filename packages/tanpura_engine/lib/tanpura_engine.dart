@@ -1,33 +1,98 @@
-// You have generated a new plugin project without specifying the `--platforms`
-// flag. A plugin project with no platform support was generated. To add a
-// platform, run `flutter create -t plugin --platforms <platforms> .` under the
-// same directory. You can also find a detailed instruction on how to add
-// platforms in the `pubspec.yaml` at
-// https://flutter.dev/to/pubspec-plugin-platforms.
+import 'package:tanpura_engine/enum/engine_enums.dart';
 
 import 'tanpura_engine_platform_interface.dart';
 
-/// This is Tanpura engine
-/// Provides methods to start, stop, and set tempo of the Tanpura sound.
+/// Public API for the Tanpura audio engine.
+///
+/// This API separates:
+/// - Engine lifecycle (initialize / release)
+/// - Playback lifecycle (play / pause)
 class TanpuraEngine {
-  /// Starts the Tanpura sound.
-  static Future<void> start() {
-    return TanpuraEnginePlatform.instance.start();
+  TanpuraEngine._(); // no instances
+
+  /// Sets the first string (tonal center) of the tanpura.
+  ///
+  /// This affects the base pitch of the entire drone.
+  static Future<void> setFirstString(FirstString firstString) {
+    return TanpuraEnginePlatform.instance.setFirstString(firstString);
   }
 
-  /// Stops the Tanpura sound.
-  static Future<void> stop() {
-    return TanpuraEnginePlatform.instance.stop();
+  /// Returns the platform version.
+  Future<String?> getPlatformVersion() {
+    return TanpuraEnginePlatform.instance.getPlatformVersion();
   }
 
-  /// Sets the tempo of the Tanpura sound.
-  /// [intervalSec] is the interval in seconds.
+  /// Initializes the native audio engine.
+  ///
+  /// Safe to call multiple times.
+  /// Does NOT start sound playback.
+  static Future<void> initialize() {
+    return TanpuraEnginePlatform.instance.initialize();
+  }
+
+  /// Starts tanpura sound playback.
+  ///
+  /// Engine must be initialized.
+  static Future<void> play() {
+    return TanpuraEnginePlatform.instance.play();
+  }
+
+  /// Pauses tanpura sound playback.
+  ///
+  /// Engine remains alive.
+  static Future<void> pause() {
+    return TanpuraEnginePlatform.instance.pause();
+  }
+
+  /// Releases native resources.
+  ///
+  /// Should be called when the app is done with audio.
+  static Future<void> release() {
+    return TanpuraEnginePlatform.instance.release();
+  }
+
+  /// Sets tempo (energy refresh interval in seconds).
   static Future<void> setTempo(double intervalSec) {
+    assert(intervalSec > 0);
     return TanpuraEnginePlatform.instance.setTempo(intervalSec);
   }
 
-  /// Gets the platform version.
-  static Future<String?> getPlatformVersion() {
-    return TanpuraEnginePlatform.instance.getPlatformVersion();
+  /// Returns true if the native audio engine is running.
+  static Future<bool> isEngineRunning() {
+    return TanpuraEnginePlatform.instance.isEngineRunning();
+  }
+
+  /// Returns true if tanpura sound is currently playing.
+  static Future<bool> isPlaying() {
+    return TanpuraEnginePlatform.instance.isPlaying();
+  }
+
+  /// Sets the master volume (0.0 to 1.0).
+  static Future<void> setVolume(double volume) {
+    return TanpuraEnginePlatform.instance.setVolume(volume);
+  }
+
+  /// Sets the scale/pitch (base frequency of Sa).
+  static Future<void> setScale(Scale scale) {
+    return TanpuraEnginePlatform.instance.setScale(scale);
+  }
+
+  /// Sets the octave (pitch range).
+  /// - Octave.low: Lower octave (deeper bass)
+  /// - Octave.mid: Middle octave (default, standard tanpura range)
+  /// - Octave.high: Higher octave (brighter, higher pitch)
+  static Future<void> setOctave(Octave octave) {
+    return TanpuraEnginePlatform.instance.setOctave(octave);
+  }
+
+  /// Gets the current octave setting.
+  static Future<Octave> getOctave() {
+    return TanpuraEnginePlatform.instance.getOctave();
+  }
+
+  /// Exports audio to a WAV file.
+  /// Returns true if successful.
+  static Future<bool> exportWav(String filePath, {double durationSec = 5.0}) {
+    return TanpuraEnginePlatform.instance.exportWav(filePath, durationSec);
   }
 }

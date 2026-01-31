@@ -4,7 +4,9 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:tanpura_engine/tanpura_engine.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await TanpuraEngine.initialize();
   runApp(const MyApp());
 }
 
@@ -17,11 +19,11 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
-  final _tanpuraEnginePlugin = TanpuraEngine();
 
   @override
   void initState() {
     super.initState();
+
     initPlatformState();
   }
 
@@ -31,11 +33,6 @@ class _MyAppState extends State<MyApp> {
     // Platform messages may fail, so we use a try/catch PlatformException.
     // We also handle the message potentially returning null.
     try {
-      platformVersion =
-          await TanpuraEngine.getPlatformVersion() ??
-          'Unknown platform version';
-
-      await TanpuraEngine.start();
       await TanpuraEngine.setTempo(1.0);
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
@@ -45,10 +42,6 @@ class _MyAppState extends State<MyApp> {
     // message was in flight, we want to discard the reply rather than calling
     // setState to update our non-existent appearance.
     if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
   }
 
   @override
@@ -62,13 +55,13 @@ class _MyAppState extends State<MyApp> {
             Center(child: Text('Running on: $_platformVersion\n')),
             ElevatedButton(
               onPressed: () async {
-                await TanpuraEngine.start();
+                await TanpuraEngine.play();
               },
               child: const Text('Start Tanpura'),
             ),
             ElevatedButton(
               onPressed: () async {
-                await TanpuraEngine.stop();
+                await TanpuraEngine.pause();
               },
               child: const Text('Stop Tanpura'),
             ),
