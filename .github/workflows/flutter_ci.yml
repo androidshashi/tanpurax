@@ -81,13 +81,12 @@ jobs:
         run: flutter pub get
 
       # 5 Build APK
-      - name: Build APK
-        working-directory: apps/${{ github.event.inputs.app-name }}
+      - name: Build APK via Fastlane
+        working-directory: apps/${{ github.event.inputs.app-name }}/android
         run: |
-          flutter build apk \
-            --${MODE} \
-            --flavor ${FLAVOR} \
-            -t ${TARGET}
+          fastlane flutter_build \
+            flavor:${FLAVOR} \
+            mode:${MODE}
 
       # 6 Upload APK
       - name: Upload APK artifact
