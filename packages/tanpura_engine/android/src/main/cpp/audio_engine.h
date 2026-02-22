@@ -6,325 +6,201 @@
 #include <cstring>
 
 // ============================================================================
-// TANPURA DSP ENGINE - Final Verified Implementation
+// TANPURA DSP ENGINE – Exact mirror of tanpura-engine.js
 //
-// Based on the "Real Tanpura DSP Algorithm Blueprint" with:
-// - 40 vibration modes per string (rich harmonics)
-// - Power-Law Bridge Model (P^1.6) for authentic jivari
-// - Shared bridge displacement for sympathetic resonance
-// - Miraj body resonance (teakwood gourd)
+// Signal chain per string (identical to JS):
+//   osc1(sine) ─────────────────────┐
+//                                    ├─► eqFilter ─► env ─► panner ─► masterGain ─► compressor
+//   osc2(saw) ─► javariFilter(BP) ──┘
 //
-// Key physics:
-// - Dynamic Timbre: Buzz changes as string decays
-// - Inharmonicity: Higher partials slightly sharp (natural shimmer)
-// - Acoustic Interdependence: Strings sing together through shared bridge
+// String layout:
+//   0 PA:   freq = Sa × firstStringRatio  pan=−0.6  gainMod=0.9  highshelf 3kHz +5dB
+//   1 SA1:  freq = Sa × 1.001            pan=−0.2  gainMod=1.0  no EQ
+//   2 SA2:  freq = Sa × 0.999            pan=+0.2  gainMod=1.0  no EQ
+//   3 BASS: freq = Sa × 0.5             pan=+0.6  gainMod=1.2  lowshelf 150Hz +4dB
+//
+// Javari: bandpass Q=3, sweeps freq×6 → freq over 6 s (JS: duration/2 = 12/2)
+// Envelope: linear attack 0 → 0.5×gainMod in 0.8 s,
+//           exponential decay → 0.001 over 11.2 s  (JS: total duration 12 s)
+// Pluck gap: 1.3 / tempo  (default tempo=1 → 1.3 s)
+// Compressor: threshold=−8 dBFS, ratio=4:1, attack=0.01 s, release=0.1 s
 // ============================================================================
 
-static constexpr double kPi = 3.14159265358979323846;
+static constexpr double kPi    = 3.14159265358979323846;
 static constexpr double kTwoPi = 6.28318530717958647692;
 
 // ----------------------------------------------------------------------------
-// Biquad Filter for Body Resonance
+// Biquad – PeakEQ | Bandpass | HighShelf | LowShelf
+// Coefficients match Web Audio BiquadFilterNode spec exactly.
 // ----------------------------------------------------------------------------
 class Biquad {
 public:
-    float b0 = 1.0f, b1 = 0.0f, b2 = 0.0f;
-    float a1 = 0.0f, a2 = 0.0f;
-    float z1 = 0.0f, z2 = 0.0f;
+    float b0=1,b1=0,b2=0, a1=0,a2=0, z1=0,z2=0;
 
-    void setPeakEQ(float freq, float gainDb, float Q, float sampleRate) {
-        float A = powf(10.0f, gainDb / 40.0f);
-        float w0 = 2.0f * static_cast<float>(kPi) * freq / sampleRate;
-        float cosw = cosf(w0);
-        float sinw = sinf(w0);
-        float alpha = sinw / (2.0f * Q);
+    // Peaking EQ
+    void setPeakEQ(float freq, float gainDb, float Q, float sr) {
+        float A  = powf(10.f, gainDb / 40.f);
+        float w0 = 2.f * (float)kPi * freq / sr;
+        float cw = cosf(w0), sw = sinf(w0);
+        float al = sw / (2.f * Q);
+        float a0 = 1.f + al / A;
+        b0=(1.f+al*A)/a0; b1=(-2.f*cw)/a0; b2=(1.f-al*A)/a0;
+        a1=(-2.f*cw)/a0;  a2=(1.f-al/A)/a0;
+    }
 
-        float a0 = 1.0f + alpha / A;
-        b0 = (1.0f + alpha * A) / a0;
-        b1 = (-2.0f * cosw) / a0;
-        b2 = (1.0f - alpha * A) / a0;
-        a1 = (-2.0f * cosw) / a0;
-        a2 = (1.0f - alpha / A) / a0;
+    // Constant-0-dB-peak bandpass (Web Audio BPF spec)
+    void setBandpass(float freq, float Q, float sr) {
+        float w0 = 2.f * (float)kPi * freq / sr;
+        float cw = cosf(w0), sw = sinf(w0);
+        float al = sw / (2.f * Q);
+        float a0 = 1.f + al;
+        b0= al/a0; b1=0.f; b2=-al/a0;
+        a1=(-2.f*cw)/a0; a2=(1.f-al)/a0;
+    }
+
+    // High shelf, slope S=1  (Web Audio default Q = 1/√2)
+    void setHighShelf(float freq, float gainDb, float sr) {
+        float A  = powf(10.f, gainDb / 40.f);
+        float w0 = 2.f * (float)kPi * freq / sr;
+        float cw = cosf(w0), sw = sinf(w0);
+        float al = sw * 0.5f * sqrtf(2.f);        // α for S=1
+        float sA = 2.f * sqrtf(A) * al;
+        float a0 = (A+1.f)-(A-1.f)*cw+sA;
+        b0 =  A*((A+1.f)+(A-1.f)*cw+sA)/a0;
+        b1 = -2.f*A*((A-1.f)+(A+1.f)*cw)/a0;
+        b2 =  A*((A+1.f)+(A-1.f)*cw-sA)/a0;
+        a1 =  2.f*((A-1.f)-(A+1.f)*cw)/a0;
+        a2 =     ((A+1.f)-(A-1.f)*cw-sA)/a0;
+    }
+
+    // Low shelf, slope S=1
+    void setLowShelf(float freq, float gainDb, float sr) {
+        float A  = powf(10.f, gainDb / 40.f);
+        float w0 = 2.f * (float)kPi * freq / sr;
+        float cw = cosf(w0), sw = sinf(w0);
+        float al = sw * 0.5f * sqrtf(2.f);
+        float sA = 2.f * sqrtf(A) * al;
+        float a0 = (A+1.f)+(A-1.f)*cw+sA;
+        b0 =  A*((A+1.f)-(A-1.f)*cw+sA)/a0;
+        b1 =  2.f*A*((A-1.f)-(A+1.f)*cw)/a0;
+        b2 =  A*((A+1.f)-(A-1.f)*cw-sA)/a0;
+        a1 = -2.f*((A-1.f)+(A+1.f)*cw)/a0;
+        a2 =      ((A+1.f)+(A-1.f)*cw-sA)/a0;
     }
 
     float process(float x) {
-        float y = b0 * x + z1;
-        z1 = b1 * x - a1 * y + z2;
-        z2 = b2 * x - a2 * y;
+        float y = b0*x + z1;
+        z1 = b1*x - a1*y + z2;
+        z2 = b2*x - a2*y;
         return y;
     }
 
-    void reset() {
-        z1 = z2 = 0.0f;
-    }
+    void reset() { z1=z2=0.f; }
 };
 
 // ----------------------------------------------------------------------------
-// Miraj Body Resonator - Simulates teakwood gourd resonance
-// Without this, the strings sound like they're floating in mid-air
+// FeedforwardCompressor – mirrors JS DynamicsCompressor exactly
+//   threshold = −8 dBFS  (0.398107 linear)
+//   ratio     = 4 : 1
+//   attack    = 0.01 s
+//   release   = 0.10 s
+//   Sidechain: max(|L|, |R|) per sample → apply same gain to both channels
 // ----------------------------------------------------------------------------
-class MirajBodyResonator {
+class FeedforwardCompressor {
 public:
-    Biquad gourdFilter;     // 110Hz - Air volume resonance
-    Biquad woodFilter;      // 280Hz - Wood body
-    Biquad formantFilter;   // 1.2kHz - Vocal formant
-    Biquad shimmerFilter;   // 3.5kHz - Bridge shimmer
+    static constexpr float kThresholdLin = 0.398107f;  // 10^(−8/20)
+    static constexpr float kRatioExp     = 0.75f;       // 1 − 1/ratio = 1 − 1/4
 
-    void init(float sampleRate) {
-        gourdFilter.setPeakEQ(110.0f, 6.0f, 0.5f, sampleRate);
-        woodFilter.setPeakEQ(280.0f, 4.0f, 0.7f, sampleRate);
-        formantFilter.setPeakEQ(1200.0f, 3.0f, 1.0f, sampleRate);
-        shimmerFilter.setPeakEQ(3500.0f, 2.0f, 1.5f, sampleRate);
+    float envLevel    = 0.f;
+    float attackCoef  = 0.f;
+    float releaseCoef = 0.f;
+
+    void init(float sr) {
+        // Discrete-time RC coefficients: coef = exp(−1 / (τ × sr))
+        attackCoef  = expf(-1.f / (0.01f * sr));
+        releaseCoef = expf(-1.f / (0.10f * sr));
     }
 
-    float process(float input) {
-        float out = input;
-        out = gourdFilter.process(out);
-        out = woodFilter.process(out);
-        out = formantFilter.process(out);
-        out = shimmerFilter.process(out);
-        return out;
-    }
+    // Process one stereo sample pair in-place
+    void process(float& L, float& R) {
+        float inputPeak = fmaxf(fabsf(L), fabsf(R));
 
-    void reset() {
-        gourdFilter.reset();
-        woodFilter.reset();
-        formantFilter.reset();
-        shimmerFilter.reset();
-    }
-};
+        // Peak envelope follower with different attack / release
+        if (inputPeak > envLevel)
+            envLevel = attackCoef  * envLevel + (1.f - attackCoef)  * inputPeak;
+        else
+            envLevel = releaseCoef * envLevel + (1.f - releaseCoef) * inputPeak;
 
-// ----------------------------------------------------------------------------
-// String Mode - Single vibration mode of a string
-// ----------------------------------------------------------------------------
-struct StringMode {
-    double q = 0;           // Displacement
-    double v = 0;           // Velocity
-    double w2 = 0;          // Angular frequency SQUARED (for efficiency)
-    double d = 0;           // Damping coefficient
-    double phi_bridge = 0;  // Mode shape at bridge contact point
-};
-
-// ----------------------------------------------------------------------------
-// TanpuraString - Single string with 40 vibration modes
-// ----------------------------------------------------------------------------
-class TanpuraString {
-public:
-    static constexpr int kNumModes = 40;
-    StringMode modes[kNumModes];
-    double currentForce = 0;  // Current jivari force on this string
-
-    void init(double f0, double sampleRate) {
-        for (int n = 1; n <= kNumModes; ++n) {
-            StringMode& m = modes[n - 1];
-
-            // Inharmonicity: higher partials are slightly sharp
-            // This creates the natural "shimmer" and "beating"
-            double stiffness = 1.0 + (n * n * 0.00001);
-
-            // Store angular frequency SQUARED for efficiency
-            double w = kTwoPi * f0 * n * stiffness;
-            m.w2 = w * w;
-
-            // Frequency-dependent damping (higher harmonics decay faster)
-            m.d = 0.4 + (n * 0.12);
-
-            // Mode shape at bridge position (5% from end)
-            m.phi_bridge = sin(n * kPi * 0.05);
-
-            m.q = m.v = 0;
+        if (envLevel > kThresholdLin) {
+            // gain = (threshold / envLevel)^(1 − 1/ratio)
+            float gain = powf(kThresholdLin / envLevel, kRatioExp);
+            L *= gain;
+            R *= gain;
         }
     }
 
-    void pluck(double force, double position) {
-        // Apply force to each mode based on mode shape at pluck position
-        for (int n = 1; n <= kNumModes; ++n) {
-            modes[n - 1].v += force * sin(n * kPi * position);
-        }
-    }
-
-    void reset() {
-        for (int i = 0; i < kNumModes; ++i) {
-            modes[i].q = 0;
-            modes[i].v = 0;
-        }
-        currentForce = 0;
-    }
+    void reset() { envLevel = 0.f; }
 };
 
 // ----------------------------------------------------------------------------
-// TanpuraDSP - The main DSP engine with shared bridge coupling
+// StringVoice – one tanpura string, mirrors JS playString() exactly
 //
-// This is the "Real-Deal" implementation:
-// - All 4 strings share a single bridge state
-// - Jivari uses Power-Law (P^1.6) for teakwood hardness
-// - Strings resonate sympathetically through the bridge
+// Signal path:
+//   sine + javariFilter(saw) → eqFilter → envelope × [panL, panR]
 // ----------------------------------------------------------------------------
-class TanpuraDSP {
-public:
-    static constexpr int kNumStrings = 4;
-    TanpuraString strings[kNumStrings];
+struct StringVoice {
+    enum EnvState { IDLE, ATTACK, DECAY } envState = IDLE;
 
-    // Shared bridge state - this is what makes strings "sing together"
-    double bridgeState = 0;
-    double sampleRate = 48000.0;
-    double jivariStrength = 1.0;
-    double dt = 1.0 / 48000.0;
+    // Oscillators
+    double sinePhase = 0;
+    double sawPhase  = 0;
+    double phaseInc  = 0;
 
-    // Verified Jivari constants
-    static constexpr double kBridgeThreshold = -0.00008;   // Thread clearance (h_b)
-    static constexpr double kBridgeStiffness = 9000000.0;  // Contact stiffness
-    static constexpr double kBridgeExponent = 1.6;         // Teakwood sweet spot
-    static constexpr double kCouplingFactor = 0.02;        // Sympathetic resonance
+    // Javari bandpass (sweeps freq×6 → freq over 6 s, coeffs updated every 64 samples)
+    Biquad javariFilter;
+    double javariFreq       = 0;
+    double javariTargetFreq = 0;
+    double javariMult64     = 1.0;   // compound per-64-sample sweep multiplier
+    int    javariCount      = 0;
+    bool   javariSweeping   = false;
 
-    void init(double rootFreq, double sr) {
-        sampleRate = sr;
-        dt = 1.0 / sr;
+    // Per-string EQ
+    Biquad eqFilter;
+    bool   useEq = false;
 
-        // Standard tanpura tuning
-        // String 0: Pa (1.5x root) or Ma depending on setting
-        // String 1: Sa (root frequency)
-        // String 2: Sa (root frequency, slight detune for beating)
-        // String 3: Sa Low / Kharaj (0.5x root)
-        strings[0].init(rootFreq * 1.5, sr);
-        strings[1].init(rootFreq, sr);
-        strings[2].init(rootFreq * 1.003, sr);  // Slight detune for natural beating
-        strings[3].init(rootFreq * 0.5, sr);
-    }
+    // Envelope
+    double envGain    = 0;
+    double peakGain   = 0;
+    double attackStep = 0;
+    double decayMult  = 1.0;
 
-    void initWithFrequencies(double f0, double f1, double f2, double f3, double sr) {
-        sampleRate = sr;
-        dt = 1.0 / sr;
-        strings[0].init(f0, sr);
-        strings[1].init(f1, sr);
-        strings[2].init(f2, sr);
-        strings[3].init(f3, sr);
-    }
+    // Constant-power stereo pan
+    float panL = 0.707f;
+    float panR = 0.707f;
 
-    void setJivari(double strength) {
-        jivariStrength = strength;
-    }
-
-    float processSample() {
-        double totalBridgeForce = 0;
-
-        // STEP 1: Calculate COLLECTIVE bridge force from all strings
-        for (int s = 0; s < kNumStrings; ++s) {
-            TanpuraString& str = strings[s];
-
-            // Sum displacement at bridge position across all modes
-            double y_bridge = 0;
-            for (int i = 0; i < TanpuraString::kNumModes; ++i) {
-                y_bridge += str.modes[i].q * str.modes[i].phi_bridge;
-            }
-
-            // Jivari Law: Power function for curved bridge contact
-            // When string goes below threshold, bridge pushes back
-            if (y_bridge < kBridgeThreshold) {
-                double penetration = kBridgeThreshold - y_bridge;
-                // F = k * d^1.6 (verified teakwood exponent)
-                str.currentForce = jivariStrength * kBridgeStiffness
-                                 * pow(penetration, kBridgeExponent);
-            } else {
-                str.currentForce = 0;
-            }
-
-            totalBridgeForce += str.currentForce;
-        }
-
-        // STEP 2: Update shared bridge coupling (inertial smoothing)
-        // This is what makes the strings "sing together"
-        bridgeState = bridgeState * 0.9 + totalBridgeForce * 0.1;
-
-        // STEP 3: Update physics for each string mode
-        float mix = 0;
-        for (int s = 0; s < kNumStrings; ++s) {
-            TanpuraString& str = strings[s];
-
-            for (int i = 0; i < TanpuraString::kNumModes; ++i) {
-                StringMode& m = str.modes[i];
-
-                // Sympathetic resonance from shared bridge
-                double coupling = bridgeState * kCouplingFactor;
-
-                // Newton's second law: a = -w²q - dv + (F_jivari + F_coupling) * φ
-                double a = (-m.w2 * m.q)
-                         - (m.d * m.v)
-                         + (str.currentForce + coupling) * m.phi_bridge;
-
-                // Euler integration
-                m.v += a * dt;
-                m.q += m.v * dt;
-
-                // Output is sum of velocities (proportional to sound pressure)
-                mix += static_cast<float>(m.v);
-            }
-        }
-
-        // Output normalization
-        return mix * 0.005f;
-    }
-
-    void pluckString(int stringIndex, double force, double position) {
-        if (stringIndex >= 0 && stringIndex < kNumStrings) {
-            strings[stringIndex].pluck(force, position);
-        }
-    }
-
-    void reset() {
-        for (int s = 0; s < kNumStrings; ++s) {
-            strings[s].reset();
-        }
-        bridgeState = 0;
-    }
-};
-
-// ----------------------------------------------------------------------------
-// Raised Cosine Excitation - Smooth pluck without clicks
-// ----------------------------------------------------------------------------
-class RaisedCosineExcitation {
-public:
-    int pluckSamples = 0;
-    int totalSamples = 0;
-    double amplitude = 0.0;
-    double position = 0.25;
     double sampleRate = 48000.0;
 
-    void setSampleRate(double sr) {
-        sampleRate = sr;
-    }
+    // Trigger a new pluck (mirrors JS playString parameters)
+    void trigger(double freq, double gainMod, float pan,
+                 bool highShelf, bool lowShelf,
+                 float shelfFreq, float shelfGainDb, double sr);
 
-    void trigger(double intensity, double durationMs, double pos = 0.25) {
-        amplitude = intensity;
-        position = pos;
-        totalSamples = static_cast<int>(durationMs * sampleRate / 1000.0);
-        pluckSamples = totalSamples;
-    }
+    // Accumulate one stereo sample into outL / outR
+    void processSample(float& outL, float& outR);
 
-    double generate() {
-        if (pluckSamples <= 0) return 0.0;
-
-        int elapsed = totalSamples - pluckSamples;
-        double phase = (kTwoPi * elapsed) / totalSamples;
-
-        // Raised cosine: smooth bell-shaped pulse
-        double force = 0.5 * amplitude * (1.0 - cos(phase));
-
-        pluckSamples--;
-        return force;
-    }
-
-    bool isActive() const { return pluckSamples > 0; }
-    double getPosition() const { return position; }
+    bool isActive() const { return envState != IDLE; }
 
     void reset() {
-        pluckSamples = 0;
-        totalSamples = 0;
+        envState  = IDLE;
+        envGain   = 0;
+        sinePhase = sawPhase = 0;
+        javariFilter.reset();
+        eqFilter.reset();
     }
 };
 
 // ============================================================================
-// Main Audio Engine
+// AudioEngine – Oboe-based host, same public API as before
 // ============================================================================
 class AudioEngine : public oboe::AudioStreamCallback {
 public:
@@ -336,15 +212,15 @@ public:
     void pause();
     bool isPlaying() const;
 
-    void setTempo(float intervalSec);
-    void setFirstString(int idx);
-    void setScale(int idx);
-    void setVolume(float vol);
-    void setOctave(int idx);
-    void setJivari(float level);
+    void setTempo(float intervalSec);       // gap between string plucks in seconds
+    void setFirstString(int idx);           // 0..11 chromatic (Pa=7, Ma=5, Ni=11)
+    void setScale(int idx);                 // 0..11  (C3=0 .. B3=11)
+    void setVolume(float vol);              // 0..1   → masterGain equivalent
+    void setOctave(int idx);               // 0=low 1=mid 2=high
+    void setJivari(float level);            // API-compat no-op (JS has no jivari knob)
 
-    int getOctave() const;
-    float getJivari() const;
+    int   getOctave()  const;
+    float getJivari()  const;
 
     bool exportToWav(const char* path, float duration);
 
@@ -356,36 +232,25 @@ public:
 private:
     std::shared_ptr<oboe::AudioStream> stream;
 
-    std::atomic<bool> engineRunning{false};
-    std::atomic<bool> playing{false};
-    std::atomic<float> masterVolume{0.85f};
+    std::atomic<bool>  engineRunning{false};
+    std::atomic<bool>  playing{false};
+    std::atomic<float> masterVolume{0.8f};         // JS masterGain = 0.8
     std::atomic<float> jivariLevel{0.5f};
-    std::atomic<float> pluckIntervalSec{0.8f};
-    std::atomic<int> currentScale{2};
-    std::atomic<int> currentOctave{1};
+    std::atomic<float> pluckIntervalSec{1.3f};     // JS gap = 1.3 / tempo; default tempo=1
+    std::atomic<int>   currentScale{2};             // D3 default
+    std::atomic<int>   currentOctave{1};            // mid
 
-    float sampleRate = 48000.0f;
-    int currentFirstString = 7;
-    bool isSaPaMode = true;
+    float sampleRate         = 48000.f;
+    int   currentFirstString = 7;                   // Pa (≈ 3/2 above, halved → 0.75 below)
 
-    // String frequencies (updated when scale/octave changes)
-    float stringFreq[4] = {220.0f, 146.83f, 147.27f, 73.42f};
+    float stringFreq[4] = {110.f, 147.0f, 146.7f, 73.4f};
 
-    // The main DSP engine
-    TanpuraDSP dsp;
+    StringVoice           voices[4];
+    FeedforwardCompressor compressor;               // mirrors JS DynamicsCompressor
 
-    // Raised cosine excitation for each string
-    RaisedCosineExcitation excitation[4];
-
-    // Body resonator
-    MirajBodyResonator bodyResonator;
-
-    // Stereo panning
-    float stringPan[4] = {-0.3f, -0.1f, 0.1f, 0.3f};
-
-    // Pluck scheduling (6-beat Darda cycle)
+    // 4-string sequential pluck scheduling
     int framesSincePluck = 0;
-    int currentBeat = 0;
+    int currentString    = 0;
 
     void updateFrequencies();
     void initEngine();
