@@ -12,8 +12,8 @@ class FirstStringDropdown extends StatefulWidget {
 }
 
 class _FirstStringDropdownState extends State<FirstStringDropdown> {
-  // Default to Pa (most common tanpura tuning) - matches native engine default
-  late FirstString selectedString = FirstString.maShuddh;
+  // Default to Pa (most common tanpura tuning) - matches JS default (ratio 0.75)
+  late FirstString selectedString = FirstString.pa;
 
   @override
   void initState() {
